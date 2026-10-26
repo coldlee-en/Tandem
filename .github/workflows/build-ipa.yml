@@ -14,7 +14,7 @@ on:
         options: [native, interface]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ipa-${{ github.ref }}-${{ inputs.mode || 'native' }}
@@ -28,6 +28,30 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+
+      - name: Reserve version tag at the build source
+        if: inputs.mode != 'interface' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PYTAG'
+          import json, os, re, subprocess
+          from pathlib import Path
+          version = re.search(r'MARKETING_VERSION: "([0-9]+[.][0-9]+[.][0-9]+)"', Path('project.yml').read_text())
+          if not version:
+              raise SystemExit('Expected a three-component marketing version.')
+          repo, sha = os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_SHA']
+          tag = 'v' + version.group(1)
+          result = subprocess.run(['gh', 'api', f'repos/{repo}/git/ref/tags/{tag}'], capture_output=True, text=True)
+          if result.returncode == 0:
+              target = subprocess.check_output(['gh', 'api', f'repos/{repo}/commits/{tag}', '--jq', '.sha'], text=True).strip()
+              if target != sha:
+                  raise SystemExit('This version is already tagged at another commit. Bump the version/build before publishing.')
+          elif 'HTTP 404' in result.stderr:
+              subprocess.run(['gh', 'api', '--method', 'POST', f'repos/{repo}/git/refs', '-f', f'ref=refs/tags/{tag}', '-f', f'sha={sha}'], check=True, stdout=subprocess.DEVNULL)
+          else:
+              raise SystemExit(result.stderr)
+          PYTAG
 
       - name: Select Xcode 26 or later
         run: |

@@ -80,7 +80,8 @@ def publish(tag, assets, notes, repository, source_sha):
         if target != source_sha:
             raise ValueError('This version already points to another source commit; bump the version.')
         if not release['isDraft']:
-            remote = {asset['name']: asset for asset in release['assets']}
+            metadata = json.loads(command(['gh', 'api', f'repos/{repository}/releases/tags/{tag}']))
+            remote = {asset['name']: asset for asset in metadata['assets']}
             if all(remote.get(path.name, {}).get('digest') == 'sha256:' + digest(path) for path in assets):
                 print('Already published: ' + release['url'])
                 return release['url']

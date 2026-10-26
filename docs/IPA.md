@@ -12,7 +12,8 @@ at source `8d34fae`. Download the
 [unsigned native IPA artifact](https://github.com/coldlee-en/Tandem/actions/runs/40418548887/artifacts/12696757979)
 from Actions. The artifact ZIP contains the IPA and a manifest with its SHA-256; GitHub
 sign-in may be required, and Actions retention limits apply. This is an Actions
-artifact, not a GitHub Release.
+artifact. Version 0.1.1 is also published at
+https://github.com/coldlee-en/Tandem/releases/tag/v0.1.1 with the IPA, manifest, and checksum.
 
 Verified IPA SHA-256:
 
@@ -127,3 +128,12 @@ python3 scripts/package_ipa.py --self-test
 These tests use explicitly synthetic Mach-O parser fixtures. They verify the
 packager's rejection and ZIP behavior; they do not constitute an iOS build or
 gameplay test.
+
+## Automatic releases
+
+Changing the version/build in `project.yml` on main starts the native build.
+The build reserves its version tag, and a successful native build triggers
+`release.yml`, which validates its source, bundle metadata, and SHA-256 before
+publishing an unsigned prerelease with all three assets. Published versions
+are immutable; bump the version for changed source/binaries. The release
+workflow also supports a successful build run ID for backfilling an artifact.

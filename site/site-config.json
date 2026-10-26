@@ -1,5 +1,6 @@
 {
   "repositoryUrl": "https://github.com/coldlee-en/Tandem",
   "defaultBranch": "main",
-  "releaseReady": false
+  "releaseReady": true,
+  "releaseTag": "v0.1.1"
 }
