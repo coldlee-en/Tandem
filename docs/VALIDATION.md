@@ -4,15 +4,15 @@ Current evidence as of 2026-10-26:
 
 | macOS CI check | Result |
 | --- | --- |
-| EmulationKit library tests | **16 passed** |
-| iOS interface compilation and simulator session tests | Passed in [Validate](https://github.com/coldlee-en/Tandem/actions/runs/40411690350); all **4 session-lifecycle tests executed, 0 failures**, plus 16 library tests |
+| EmulationKit library tests | **23 passed** |
+| iOS interface compilation and simulator session tests | Passed in [Validate](https://github.com/coldlee-en/Tandem/actions/runs/40418548684); all **4 session-lifecycle tests executed, 0 failures**, plus 23 library and key import tests |
 | Switch NativeAOT runtime | Compiled for iOS arm64; cached artifact verified |
 | Cytrus static archive | `libCytrus.a` compiled in [native build](https://github.com/coldlee-en/Tandem/actions/runs/40405335353) |
-| Final native app archive and IPA | [Build 40411695317 passed](https://github.com/coldlee-en/Tandem/actions/runs/40411695317) at source `205140a`; [unsigned native artifact](https://github.com/coldlee-en/Tandem/actions/runs/40411695317/artifacts/12694770502) downloaded and checksum verified |
+| Final native app archive and IPA | [Build 40418548887 passed](https://github.com/coldlee-en/Tandem/actions/runs/40418548887) at source `8d34fae`; [unsigned native artifact](https://github.com/coldlee-en/Tandem/actions/runs/40418548887/artifacts/12696757979) downloaded and checksum verified |
 | Packaged Mach-O inspection | All 21 images have deployment minimums at or below iOS 17; bundled dependency-closure check passed |
 
 Native IPA SHA-256:
-`00e9f9d066dfc27b81de2bfaf532ab9a1abfbefc6e270e1dbfd63101839192bc`.
+`ca44acd38c767e841f8d80e4bf6fa4787276b1d2930883bd75f5ce460e257f0f`.
 
 Additional checks performed in the Linux workspace:
 
@@ -27,9 +27,9 @@ Additional checks performed in the Linux workspace:
 | `bash -n scripts/build_switch.sh scripts/prepare_3ds.sh` | Passed |
 | Python compilation of setup/patch/generation scripts | Passed |
 | App Info.plist parse | Passed |
-| Swift frontend parse of all 16 app/test Swift files | Passed, no diagnostics |
+| Swift frontend parse of all 23 app/test Swift files | Passed, no diagnostics |
 | Non-UI logic typecheck against temporary Linux platform shims | Passed after correcting an explicit-self capture in the Switch event callback; this does not validate Apple APIs |
-| IPA packaging/rejection unit tests | 12 passed; fixtures are structural parser tests, not compiled applications |
+| IPA packaging/rejection unit tests | 14 passed; fixtures are structural parser tests, not compiled applications |
 | Static website browser checks | Index/build pages passed at 390, 768, and 1440px; no overflow, internal-anchor or JavaScript errors |
 | Pinned graphics headers | Downloaded and assembled successfully from the reviewed commits |
 | Native FFmpeg header compatibility | Actual Cytrus FFmpeg header compiled with bundled framework headers |
@@ -48,3 +48,19 @@ firmware installation, graphics/audio/input during gameplay, saving, title
 compatibility, performance, memory limits, and physical-device lifecycle behavior
 remain unverified. Static deployment/dependency checks do not establish runtime
 compatibility. Follow [DEVICE_TESTING.md](DEVICE_TESTING.md) for device validation.
+
+## Encrypted 3DS loader (0.1.1)
+
+The native build includes the restored NCCH/NCSD decryption paths and the new
+3DS key/seed Settings imports. All 23 library/key-import tests and four simulator
+session tests passed. Seventeen synthetic-container fixture combinations passed
+under AddressSanitizer and UndefinedBehaviorSanitizer, covering versions 0/1/2,
+four crypto methods, seeds, compressed ExeFS code, NCSD offsets, and cached and
+uncached RomFS reads. Missing/wrong keys and seeds were rejected. Both modified
+loader files passed independent C++23 syntax checks. Checked patches remained
+byte-identical after marker deletion and reapplication.
+
+The downloaded IPA is version 0.1.1, build 2; its ZIP CRC, manifest checksum,
+new Settings labels, and all 21 embedded device binaries were verified. No
+console keys or game content were used in these tests. Ocarina of Time 3D
+gameplay with a real console dump remains unverified.

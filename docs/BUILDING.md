@@ -2,14 +2,14 @@
 
 ## Validation status
 
-All 16 EmulationKit library tests pass on macOS. They cover file import, index
+All 23 EmulationKit library tests pass on macOS. They cover file import, index
 persistence, failed-write rollback, path/symlink rejection, and interrupted-delete
 recovery. The iOS interface compiles in macOS CI, and all 4 session-lifecycle
 tests pass in the iOS simulator with 0 failures.
 
 The complete native app, including Switch NativeAOT and Cytrus, archived and
-packaged successfully in [macOS CI](https://github.com/coldlee-en/Tandem/actions/runs/40411695317).
-The [unsigned development IPA](https://github.com/coldlee-en/Tandem/actions/runs/40411695317/artifacts/12694770502)
+packaged successfully in [macOS CI](https://github.com/coldlee-en/Tandem/actions/runs/40418548887).
+The [unsigned development IPA](https://github.com/coldlee-en/Tandem/actions/runs/40418548887/artifacts/12696757979)
 must be re-signed for sideloading. Signing, physical-device execution, performance,
 and game compatibility remain unverified; Switch requires JIT. See
 [VALIDATION.md](VALIDATION.md) and [IPA.md](IPA.md) for evidence and installation requirements.
