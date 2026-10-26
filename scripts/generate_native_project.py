@@ -31,7 +31,8 @@ def specification(vulkan_include: Path | None, with_3ds: bool, with_switch: bool
             raise ValueError("Run scripts/prepare_3ds.sh to prepare graphics headers, or set TANDEM_VULKAN_INCLUDE to a Vulkan SDK include directory.")
         for relative in ["vulkan/vulkan_core.h", "glslang/Public/ShaderLang.h",
                          "glslang/Include/ResourceLimits.h", "glslang/SPIRV/GlslangToSpv.h",
-                         "vma/vk_mem_alloc.h"]:
+                         "vma/vk_mem_alloc.h", "spirv/unified1/spirv.hpp11",
+                         "spirv/unified1/GLSL.std.450.h"]:
             if not (vulkan_include / relative).is_file():
                 raise ValueError(f"Missing Vulkan SDK header: {vulkan_include / relative}")
         # FFmpeg is compiled unconditionally by the pinned Cytrus source. Add

@@ -45,7 +45,7 @@ checkout:
 | folium-app/SharedDependencies | `9787aa9062d8ff220f127052597e6f3ae1dcbc7a` |
 | jarrodnorwell/zstd | `9baae4431585740983318801beff0a7ae4494291` |
 
-Cytrus needs Vulkan, glslang, and Vulkan Memory Allocator headers, in addition to
+Cytrus needs Vulkan, SPIR-V, glslang, and Vulkan Memory Allocator headers, in addition to
 the dependencies provided through SwiftPM. Preparation now automatically checks
 out the matching open-source Vulkan SDK `1.4.363.0` headers and VMA `3.3.0` into
 `Vendor/GraphicsHeaders/include`, without a full SDK installer:
@@ -55,7 +55,13 @@ python3 scripts/generate_native_project.py --3ds --generate
 open TandemNative.xcodeproj
 ```
 
-The generator verifies `vulkan/vulkan.hpp`, `glslang/Public/ShaderLang.h`, and
+The script pins SPIRV-Headers to `496543121ce6419f23d6fa5d7194ba66c36212d2`
+(Vulkan SDK 1.4.363.0). A recognized earlier generated header set is preserved
+under `Vendor/GraphicsHeaders/headers-backup-*` when upgraded; unknown directories
+are left untouched.
+
+The generator verifies `vulkan/vulkan.hpp`, `spirv/unified1/spirv.hpp11`,
+`spirv/unified1/GLSL.std.450.h`, `glslang/Public/ShaderLang.h`, and
 `vma/vk_mem_alloc.h`. If your SDK places these elsewhere, create a matching
 development include directory and set `TANDEM_VULKAN_INCLUDE` to override the
 automatic headers. It uses Folium's existing MoltenVK, Boost, and FFmpeg
