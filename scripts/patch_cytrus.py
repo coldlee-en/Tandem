@@ -6,6 +6,60 @@ import hashlib
 import json
 
 REPLACEMENTS = {
+    # Headers live in System/include; qualified paths avoid Xcode's flattened
+    # header map and its collisions between unrelated internal basenames.
+    "System/video_core/right_eye_disabler.cpp": [
+        ('#include "right_eye_disabler.h"', '#include "video_core/right_eye_disabler.h"'),
+    ],
+    "System/network/socket_manager.cpp": [
+        ('#include "socket_manager.h"', '#include "network/socket_manager.h"'),
+    ],
+    "System/network/announce_multiplayer_session.cpp": [
+        ('#include "announce_multiplayer_session.h"', '#include "network/announce_multiplayer_session.h"'),
+    ],
+    "System/common/web_util.cpp": [
+        ('#include "web_util.h"', '#include "common/web_util.h"'),
+    ],
+    "System/common/math_util.cpp": [
+        ('#include "math_util.h"', '#include "common/math_util.h"'),
+    ],
+    "System/common/cityhash.cpp": [
+        ('#include "cityhash.h"', '#include "common/cityhash.h"'),
+    ],
+    "System/video_core/renderer_vulkan/vk_present_window.cpp": [
+        ('#include "vk_platform.h"', '#include "video_core/renderer_vulkan/vk_platform.h"'),
+    ],
+    "System/video_core/renderer_vulkan/vk_blit_helper.cpp": [
+        ('#include "vk_blit_helper.h"', '#include "video_core/renderer_vulkan/vk_blit_helper.h"'),
+    ],
+    "System/network/artic_base/artic_base_client.cpp": [
+        ('#include "artic_base_client.h"', '#include "network/artic_base/artic_base_client.h"'),
+    ],
+    "System/input_common/sdl/sdl3_joystick.cpp": [
+        ('#include "sdl3_joystick.h"', '#include "input_common/sdl/sdl3_joystick.h"'),
+    ],
+    "System/core/file_sys/secure_value_backend.cpp": [
+        ('#include "secure_value_backend.h"', '#include "core/file_sys/secure_value_backend.h"'),
+    ],
+    "System/core/file_sys/artic_cache.cpp": [
+        ('#include "artic_cache.h"', '#include "core/file_sys/artic_cache.h"'),
+    ],
+    "System/core/file_sys/archive_artic.cpp": [
+        ('#include "archive_artic.h"', '#include "core/file_sys/archive_artic.h"'),
+    ],
+    "System/core/hle/service/http/http_c.cpp": [
+        ('#include "ctr-common-1-cert.h"', '#include "core/hle/service/http/ctr-common-1-cert.h"'),
+        ('#include "ctr-common-1-key.h"', '#include "core/hle/service/http/ctr-common-1-key.h"'),
+    ],
+    "System/core/hle/service/dlp/dlp_clt_base.cpp": [
+        ('#include "dlp_clt_base.h"', '#include "core/hle/service/dlp/dlp_clt_base.h"'),
+    ],
+    "System/core/hle/service/dlp/dlp_base.cpp": [
+        ('#include "dlp_base.h"', '#include "core/hle/service/dlp/dlp_base.h"'),
+    ],
+    "System/common/hacks/hack_manager.cpp": [
+        ('#include "hack_manager.h"', '#include "common/hacks/hack_manager.h"'),
+    ],
     "System/core/frontend/image_interface.cpp": [
         ("#include <dds_ktx.h>", "#include <dds-ktx.h>"),
     ],
@@ -13,6 +67,7 @@ REPLACEMENTS = {
         ("#include <dds_ktx.h>", "#include <dds-ktx.h>"),
     ],
     "System/common/dynamic_library/dynamic_library.cpp": [
+        ('#include "dynamic_library.h"', '#include "common/dynamic_library/dynamic_library.h"'),
         ('#elif defined(__APPLE__)\n    auto prefix = name.starts_with("lib") ? "" : "lib";', '#elif defined(__APPLE__)\n    if (name == "avcodec" || name == "avdevice" || name == "avfilter" || name == "avformat" || name == "avutil" || name == "swresample" || name == "swscale") {\n        return fmt::format("@rpath/lib{}.framework/lib{}", name, name);\n    }\n    auto prefix = name.starts_with("lib") ? "" : "lib";'),
     ],
     "Cytrus.swift": [
