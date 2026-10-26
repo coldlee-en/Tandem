@@ -4,10 +4,11 @@ A native iOS development project for Nintendo 3DS and Nintendo Switch emulation,
 using Cytrus/Azahar and the MeloNX iOS port of Ryujinx. SwiftUI, Metal surfaces,
 GameController, and local file storage. iOS 17 or later.
 
-**This is source code, not a tested or signed emulator release.** The ROM library
-passes its 16 tests on Linux. App Swift syntax was checked separately. Xcode
-compilation, native core builds, on-device execution, performance, and game
-compatibility have not been verified in this environment. There is no IPA.
+**This is an experimental development project, not a tested or signed emulator
+release.** All 16 ROM-library tests pass on macOS, the iOS interface compiles,
+and all 4 session-lifecycle tests pass in the iOS simulator in macOS CI.
+The final native archive and IPA build are still pending; on-device execution,
+performance, and game compatibility remain unverified. There is no IPA available.
 
 ## What is implemented
 
@@ -73,7 +74,10 @@ xcodebuild -project Tandem.xcodeproj -scheme Tandem \
 
 Choose an installed simulator name for the last command. The simulator exercises
 the interface/lifecycle tests; it does not run the native emulator cores.
-The included workflow builds the iOS test bundle on macOS. It has not run here.
+The [Validate workflow passed](https://github.com/coldlee-en/Tandem/actions/runs/40408625904),
+including all 16 library tests on macOS, interface compilation, and execution of
+all 4 session-lifecycle tests in the iOS simulator with 0 failures. Those tests
+use an injected core; native archiving, signing, and gameplay require separate validation.
 See [device acceptance checks](docs/DEVICE_TESTING.md) and
 [the Switch integration details](docs/SWITCH_CORE.md).
 

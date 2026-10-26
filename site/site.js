@@ -26,8 +26,19 @@
     });
     document.querySelectorAll("[data-repository-pending]").forEach(element => { element.hidden = true; });
     if (config.releaseReady === true) {
+      // Explicit tags support alpha prereleases, which /releases/latest omits.
+      // Keep the destination within this repository even for malformed config.
+      const tag = config.releaseTag;
+      const validTag = typeof tag === "string"
+        && /^[A-Za-z0-9][A-Za-z0-9._+/-]{0,127}$/.test(tag)
+        && !tag.includes("..")
+        && !tag.endsWith(".")
+        && tag.split("/").every(part => part && !part.startsWith(".") && !part.endsWith(".lock"));
+      const releaseUrl = validTag
+        ? `${repository}/releases/tag/${encodeURIComponent(tag)}`
+        : `${repository}/releases`;
       document.querySelectorAll("[data-release-link]").forEach(link => {
-        link.href = `${repository}/releases/latest`;
+        link.href = releaseUrl;
         link.hidden = false;
       });
       document.querySelectorAll("[data-release-description]").forEach(element => {

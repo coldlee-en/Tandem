@@ -63,8 +63,9 @@ jobs:
           config.update(
               repositoryUrl=f"{server}/{repository}",
               defaultBranch=branch,
-              # Publishing documentation does not establish that an IPA exists.
-              releaseReady=False,
+              # Preserve explicitly published release metadata from source;
+              # deploying documentation alone never marks a release ready.
+              releaseReady=config.get("releaseReady") is True,
           )
           config_path.parent.mkdir(parents=True, exist_ok=True)
           config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")

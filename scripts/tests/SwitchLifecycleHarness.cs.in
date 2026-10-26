@@ -1,0 +1,159 @@
+// The runner inserts actual native members below without changing their bodies.
+// Graphics/SDL dependencies are stubs. This tests lifecycle control flow only.
+using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
+
+class WindowBase
+{
+// TANDEM_NATIVE_FIELDS
+    readonly CancellationTokenSource _gpuCancellationTokenSource = new();
+    readonly Stopwatch _chrono = new();
+    public readonly ManualResetEvent _pauseEvent = new(true), _exitEvent = new(false), _gpuDoneEvent = new(false);
+    public readonly ManualResetEventSlim InitEntered = new(false), InitGate = new(true);
+    public readonly FakeDevice Device = new();
+    int _glLogLevel = 0;
+    long _ticks, _ticksPerFrame = 1;
+    string _gpuDriverName;
+    public event EventHandler<StatusUpdatedEventArgs> StatusUpdatedEvent;
+
+    void InitializeWindow() { InitEntered.Set(); InitGate.Wait(); }
+    void InitializeWindowRenderer() { }
+    void InitializeRenderer() { }
+    void SetAntiAliasing() { }
+    void SetScalingFilter() { }
+    string GetGpuDriverName() => "test";
+    void FinalizeWindowRenderer() { }
+    void SwapBuffers() { }
+    bool UpdateFrame() => true;
+    static void SDL_PumpEvents() { }
+    static void ProcessMainThreadQueue() { }
+
+// TANDEM_NATIVE_METHODS
+}
+
+class FakeDevice
+{
+    public readonly FakeGpu Gpu = new();
+    public readonly FakeStats Statistics = new();
+    public readonly FakeSystem System = new();
+    public readonly FakeConfig Configuration = new();
+    public bool EnableDeviceVsync => true;
+    public bool WaitFifo() { Thread.Sleep(1); return false; }
+    public void ProcessFrame() { }
+    public bool ConsumeFrameAvailable() => false;
+    public void PresentFrame(Action action) => action();
+}
+
+class FakeGpu
+{
+    public readonly ThreadedRenderer Renderer = new();
+    public readonly ManualResetEventSlim Entered = new(false);
+    public void SetGpuThread() { }
+    public void InitializeShaderCache(CancellationToken token) { Entered.Set(); }
+}
+
+class ThreadedRenderer
+{
+    public readonly ManualResetEventSlim TailGate = new(true), CallbackReturned = new(false), Returned = new(false);
+    public void Initialize(int level) { }
+    public void RunLoop(Action callback)
+    {
+        callback();
+        CallbackReturned.Set();
+        TailGate.Wait();
+        Returned.Set();
+    }
+    public void FlushThreadedCommands() { }
+}
+
+class FakeStats
+{
+    public void RecordFifoStart() { }
+    public void RecordFifoEnd() { }
+    public float GetGameFrameRate() => 0;
+    public float GetGameFrameTime() => 0;
+    public float GetFifoPercent() => 0;
+}
+
+class FakeSystem { public readonly FakeState State = new(); }
+class FakeState { public bool DockedMode => false; }
+class FakeConfig { public readonly FakeAspect AspectRatio = new(); }
+class FakeAspect { public string ToText() => "16:9"; }
+static class GraphicsConfig { public static float ResScale = 1; }
+class StatusUpdatedEventArgs : EventArgs { public StatusUpdatedEventArgs(params object[] values) { } }
+
+static class Program
+{
+    public static void TriggerCallback(string identifier) { }
+
+    static void Require(bool condition, string message)
+    {
+        if (!condition) throw new Exception(message);
+    }
+
+    static async Task Bounded(Task task, string name)
+    {
+        if (await Task.WhenAny(task, Task.Delay(2000)) != task)
+            throw new Exception("Timed out: " + name);
+        await task;
+    }
+
+    static async Task Run()
+    {
+        var before = new WindowBase();
+        before.Exit();
+        await Bounded(Task.Run(before.Execute), "stop before Execute");
+        Console.WriteLine("PASS stop before Execute remains latched");
+
+        var between = new WindowBase();
+        between.InitGate.Reset();
+        var during = Task.Run(between.Execute);
+        Require(between.InitEntered.Wait(2000), "startup did not enter");
+        between.Exit();
+        between.InitGate.Set();
+        await Bounded(during, "stop during initialization");
+        Console.WriteLine("PASS stop between active-state assignment and render-thread start");
+
+        var paused = new WindowBase();
+        paused._pauseEvent.Reset();
+        var pausedTask = Task.Run(paused.Execute);
+        Require(paused.Device.Gpu.Entered.Wait(2000), "GPU did not enter");
+        await Task.Delay(20);
+        paused.Exit();
+        await Bounded(pausedTask, "stop while paused");
+        Console.WriteLine("PASS paused GPU wakes and signals completion");
+
+        var threaded = new WindowBase();
+        threaded.Device.Gpu.Renderer.TailGate.Reset();
+        var threadTask = Task.Run(threaded.Execute);
+        Require(threaded.Device.Gpu.Entered.Wait(2000), "threaded GPU did not enter");
+        threaded.Exit();
+        await Bounded(threadTask, "threaded completion");
+        Require(threaded.Device.Gpu.Renderer.CallbackReturned.Wait(2000), "callback did not complete");
+        threaded.Device.Gpu.Renderer.TailGate.Set();
+        Require(threaded.Device.Gpu.Renderer.Returned.Wait(2000), "renderer did not return");
+        await Task.Delay(20);
+        threaded.Exit();
+        Console.WriteLine("PASS threaded renderer signals before final shutdown and does not resignal disposed event");
+
+        for (int index = 0; index < 300; index++)
+        {
+            var window = new WindowBase();
+            var execution = Task.Run(window.Execute);
+            if (index % 3 == 0) await Task.Yield();
+            if (index % 3 == 1) await Task.Delay(1);
+            window.Exit();
+            window.Exit();
+            await Bounded(execution, "race " + index);
+        }
+        Console.WriteLine("PASS 300 concurrent start/stop races and repeated stop calls");
+    }
+
+    static int Main()
+    {
+        try { Run().GetAwaiter().GetResult(); return 0; }
+        catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+    }
+}

@@ -2,16 +2,16 @@
 
 ## Validation status
 
-The Foundation-only EmulationKit package built with Swift 6.2.3 on Linux and
-passed all 16 tests. Those tests cover actual file import, index persistence,
-failed-write rollback, path/symlink rejection, and interrupted-delete recovery.
-Swift parsing and setup-script checks are recorded in [VALIDATION.md](VALIDATION.md).
+All 16 EmulationKit library tests pass on macOS. They cover file import, index
+persistence, failed-write rollback, path/symlink rejection, and interrupted-delete
+recovery. The iOS interface compiles in macOS CI, and all 4 session-lifecycle
+tests pass in the iOS simulator with 0 failures.
 
-This environment has no Xcode, Apple SDK, signing identity, or attached iPhone.
-The SwiftUI app, Objective-C helper, Cytrus, and MeloNX have not been compiled
-against an iOS SDK here. Four iOS session tests are provided but have not run.
-There is no tested gameplay or signed IPA. Native integration may require
-additional fixes discovered during the first Mac/device build.
+The Switch NativeAOT runtime has compiled on macOS and its cached artifact has
+been verified. Cytrus also compiled into `libCytrus.a`. The final native app
+archive and IPA remain pending. No IPA is available, and signing, physical-device
+execution, performance, and game compatibility remain unverified. See
+[VALIDATION.md](VALIDATION.md) for the current evidence.
 
 ## Interface project
 
@@ -159,8 +159,9 @@ xcodebuild -project Tandem.xcodeproj -scheme Tandem \
 
 Use an installed simulator name (`xcrun simctl list devices available`). The
 session tests inject a fake core to check lifecycle ordering without native
-emulation. The CI workflow builds the interface/test bundle on macOS; native
-builds still require the dependencies described above. Complete
+emulation. CI has compiled the interface and executed all 4 session-lifecycle
+tests in the iOS simulator with 0 failures. Native builds require the dependencies
+described above. Complete
 [DEVICE_TESTING.md](DEVICE_TESTING.md) on a physical device before calling this
 a playable release. A native core that hangs cannot be safely killed inside the
 app; teardown retains its surfaces/arguments while waiting for native exit.

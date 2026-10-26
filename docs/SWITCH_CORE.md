@@ -5,10 +5,10 @@ pinned to [`AzureDominus/melonx` at `55f84af15144e40d7fbe8984747855534d2a8ec1`](
 The source contains a NativeAOT .NET core and its own Swift frontend. Tandem uses
 the native core with its own interface.
 
-**Status:** the build script has been inspected against that source revision.
-It has not been run on macOS, and neither the native core nor gameplay has been
-verified on an iPhone in this workspace. This is a development integration, not
-a tested compatibility claim.
+**Status:** the Switch NativeAOT runtime has compiled on macOS, and its cached
+artifact has been verified. The final native app archive and IPA remain pending.
+Runtime behavior, JIT, and gameplay have not been verified on an iPhone. This is
+a development integration, not a tested compatibility claim.
 
 ## Build requirements
 
@@ -110,9 +110,16 @@ version. The upstream iOS 26 dual-mapped path has additional runtime requirement
 The native `main_ryujinx_sdl` call blocks until the run loop exits and belongs on
 a worker thread. The real `ran-first-frame` event is the useful startup signal;
 returning from a wrapper immediately after creating a thread does not prove a
-game started. Pause calls use `pause_emulation`, and stop calls use
-`stop_emulation`. Keep the native library loaded and the `CAMetalLayer`, strings,
-controller identity, and callbacks alive until the worker has exited.
+game started. Pause calls use `pause_emulation`. The adapter resolves
+`tandem_request_stop`, which captures the current native window and queues stop,
+latches early cancellation, and wakes a GPU waiting on pause. Keep the native
+library loaded and the `CAMetalLayer`, strings, controller identity, and callbacks
+alive until the worker has exited.
+
+The [native lifecycle regression harness](../scripts/tests/README.md) compiles
+the actual lifecycle methods with graphics/SDL stubs. All five test groups passed,
+including 300 concurrent start/stop races. This checks cancellation control flow;
+it does not run games or validate real graphics and the iOS ABI.
 
 Validate startup errors, background pause, repeated stop/start, touch, controller
 input, video decoding, firmware failures, and memory limits on real hardware
