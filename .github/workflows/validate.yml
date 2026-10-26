@@ -2,9 +2,11 @@ name: Validate
 on:
   push:
   pull_request:
+  workflow_dispatch:
 jobs:
   ios-interface:
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Test ROM library
@@ -17,5 +19,58 @@ jobs:
         run: >-
           xcodebuild -project Tandem.xcodeproj -scheme Tandem
           -configuration Debug -sdk iphonesimulator
+          -derivedDataPath "$RUNNER_TEMP/tandem-interface-derived-data"
           -destination 'generic/platform=iOS Simulator'
           CODE_SIGNING_ALLOWED=NO build-for-testing
+      - name: Select an available iPhone simulator
+        id: simulator
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+
+          catalog = json.loads(subprocess.check_output(
+              ['xcrun', 'simctl', 'list', 'devices', 'available', '--json'], text=True))
+          candidates = []
+          for runtime, devices in catalog.get('devices', {}).items():
+              match = re.search(r'\.iOS-(\d+)(?:-(\d+))?(?:-(\d+))?$', runtime)
+              if not match:
+                  continue
+              version = tuple(int(part or 0) for part in match.groups())
+              if version < (17, 0, 0):
+                  continue
+              for device in devices:
+                  if device.get('isAvailable') and device.get('name', '').startswith('iPhone'):
+                      candidates.append((version, device.get('state') == 'Booted', device['name'], device['udid']))
+          if not candidates:
+              raise SystemExit('No available iPhone simulator running iOS 17 or later is installed.')
+          version, _, name, udid = max(candidates)
+          print(f"Selected {name} ({udid}), iOS {'.'.join(map(str, version))}")
+          with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
+              output.write(f'udid={udid}\n')
+          PY
+      - name: Run iOS session lifecycle tests
+        timeout-minutes: 10
+        env:
+          TANDEM_SIMULATOR_UDID: ${{ steps.simulator.outputs.udid }}
+        run: >-
+          xcodebuild -project Tandem.xcodeproj -scheme Tandem
+          -configuration Debug -sdk iphonesimulator
+          -derivedDataPath "$RUNNER_TEMP/tandem-interface-derived-data"
+          -destination "platform=iOS Simulator,id=$TANDEM_SIMULATOR_UDID"
+          -destination-timeout 120
+          -parallel-testing-enabled NO
+          -only-testing:TandemTests/SessionTests
+          -resultBundlePath "${{ runner.temp }}/Tandem-lifecycle-tests.xcresult"
+          CODE_SIGNING_ALLOWED=NO test-without-building
+      - name: Upload lifecycle test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tandem-session-lifecycle-results
+          path: ${{ runner.temp }}/Tandem-lifecycle-tests.xcresult
+          if-no-files-found: ignore
+          retention-days: 7
