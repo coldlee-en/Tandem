@@ -35,7 +35,20 @@ final class CytrusCore: EmulatorCore, CoreExitReporting {
         await configure(secondary, secondary: true)
         // The upstream callback is optional in our patch; no UI pointer escapes.
         guard await Self.engine.insertDisc(at: gameURL) else {
-            throw EmulationError.startFailed("Cytrus could not load this game. Check its format and the core's log in System/3DS/log. Encrypted titles may require your console's system data.")
+            let result = await Self.engine.lastLoadResult()
+            let message: String
+            switch result {
+            case 5:
+                message = "The game could not be decrypted or verified. Import your console's 3DS AES keys in Settings. Seed-encrypted games also need your seeddb.bin. Check the log for missing keys, seeds, or a failed verification."
+            case 2, 6:
+                message = "The game has an unsupported or invalid format. Import a complete .3ds/.cci cartridge dump or a supported .cxi/.3dsx file."
+            case 10:
+                message = "The game requires 3DS system files that are missing. Check System/3DS/log/cytrus_log.txt for the required file."
+            default:
+                message = "Cytrus could not initialize this game (load status \(result)). See System/3DS/log/cytrus_log.txt for details."
+            }
+            self.surfaces = nil
+            throw EmulationError.startFailed(message)
         }
         loaded = true
         await Self.engine.set(change: true, isPaused: false)

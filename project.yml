@@ -26,8 +26,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.tandem.emulator
         PRODUCT_NAME: Tandem
-        CURRENT_PROJECT_VERSION: 1
-        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: 2
+        MARKETING_VERSION: "0.1.1"
         SWIFT_OBJC_BRIDGING_HEADER: App/Native/TandemRuntime.h
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: App/Info.plist

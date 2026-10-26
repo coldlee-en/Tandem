@@ -90,6 +90,19 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func importThreeDSData(_ url: URL, seedDatabase: Bool) {
+        guard session.game == nil, !isManagingSystemData else { return }
+        isManagingSystemData = true
+        systemDataMessage = nil
+        Task {
+            defer { isManagingSystemData = false }
+            do {
+                try await systemFiles.importThreeDSData(from: url, systemDirectory: systemDirectory, seedDatabase: seedDatabase)
+                systemDataMessage = seedDatabase ? "3DS seed database imported." : "3DS AES keys imported. The core will verify them when loading your game."
+            } catch { errorMessage = error.localizedDescription }
+        }
+    }
+
     func importSwitchKeys(_ url: URL) {
         guard session.game == nil, !isManagingSystemData else { return }
         isManagingSystemData = true

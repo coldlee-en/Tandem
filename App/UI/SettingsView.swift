@@ -9,7 +9,7 @@ struct SettingsView: View {
     @State private var importMode: SystemImportMode = .keys
     @State private var showingImporter = false
 
-    private enum SystemImportMode { case keys, firmware }
+    private enum SystemImportMode { case keys, firmware, threeDSKeys, threeDSSeeds }
     var body: some View {
         NavigationStack {
             List {
@@ -39,6 +39,20 @@ struct SettingsView: View {
                         .font(.footnote).foregroundStyle(TandemTheme.muted)
                 }
                 Section("System files") {
+                    Button {
+                        importMode = .threeDSKeys
+                        showingImporter = true
+                    } label: {
+                        Label("Import 3DS AES keys", systemImage: "key")
+                    }
+                    .disabled(model.isManagingSystemData || model.session.game != nil)
+                    Button {
+                        importMode = .threeDSSeeds
+                        showingImporter = true
+                    } label: {
+                        Label("Import 3DS seed database", systemImage: "internaldrive")
+                    }
+                    .disabled(model.isManagingSystemData || model.session.game != nil)
                     Button {
                         importMode = .keys
                         showingImporter = true
@@ -91,6 +105,8 @@ struct SettingsView: View {
                 switch mode {
                 case .keys: model.importSwitchKeys(url)
                 case .firmware: model.installSwitchFirmware(url)
+                case .threeDSKeys: model.importThreeDSData(url, seedDatabase: false)
+                case .threeDSSeeds: model.importThreeDSData(url, seedDatabase: true)
                 }
             case .failure(let error): model.errorMessage = error.localizedDescription
             }

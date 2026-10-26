@@ -160,16 +160,26 @@ REPLACEMENTS = {
     ],
 }
 
+# Reviewed port from the last pre-removal Citra loader; kept separate so the
+# upstream changes and attribution can be audited without hiding them in setup.
+CRYPTO_PATCH = Path(__file__).resolve().parent.parent / "CorePatches/NCCHCrypto/changes.json"
+CRYPTO_REPLACEMENTS = json.loads(CRYPTO_PATCH.read_text())
+
 def patch(root: Path):
     marker = root / ".tandem-patched-v1"
-    version = hashlib.sha256(json.dumps(REPLACEMENTS, sort_keys=True).encode()).hexdigest()
+    version = hashlib.sha256(json.dumps([REPLACEMENTS, CRYPTO_REPLACEMENTS], sort_keys=True).encode()).hexdigest()
     if marker.is_file() and marker.read_text().strip() == version:
         return
     # Validate every expected string before changing any source file.
     updated = {}
-    for relative, replacements in REPLACEMENTS.items():
+    for relative in dict.fromkeys([*REPLACEMENTS, *CRYPTO_REPLACEMENTS]):
         source = (root / relative).read_text()
-        for old, new in replacements:
+        # Restore the base spans before reapplying: later crypto changes can
+        # contain edits inside an earlier safety patch's replacement string.
+        for old, new in reversed(CRYPTO_REPLACEMENTS.get(relative, [])):
+            if new in source:
+                source = source.replace(new, old)
+        for old, new in [*REPLACEMENTS.get(relative, []), *CRYPTO_REPLACEMENTS.get(relative, [])]:
             if new in source:
                 # Preserve already patched spans while upgrading older source
                 # checkouts with newly added fixes.
