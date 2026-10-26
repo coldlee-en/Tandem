@@ -1,0 +1,148 @@
+// Synthetic ciphertext only. Native methods and header layouts are inserted unchanged.
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstring>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+#include <cryptopp/aes.h>
+#include <cryptopp/modes.h>
+#include <cryptopp/sha.h>
+#include "common/bit_field.h"
+#include "common/static_lru_cache.h"
+#include "common/alignment.h"
+#define LOG_DEBUG(...)
+#define LOG_ERROR(...)
+#define LOG_WARNING(...)
+#define LOG_TRACE(...)
+#define LOG_INFO(...)
+#define ASSERT(x) assert(x)
+namespace fmt { template<class... T> std::string format(const char*,T&&...) {return "/no-override/";} }
+namespace Loader { enum class ResultStatus {Success, Error, ErrorInvalidFormat, ErrorNotImplemented, ErrorNotLoaded, ErrorNotUsed, ErrorAlreadyLoaded, ErrorMemoryAllocationFailed, ErrorEncrypted}; }
+namespace FileUtil {
+std::map<std::string,std::shared_ptr<std::vector<u8>>> fixtures;
+constexpr u32 MakeMagic(char a,char b,char c,char d){return u32(a)|(u32(b)<<8)|(u32(c)<<16)|(u32(d)<<24);}
+enum class UserPath {LoadDir,SDMCDir};
+std::string GetUserPath(UserPath){return "/no-override/";}
+bool Exists(const std::string&){return false;}
+bool IsDirectory(const std::string&){return false;}
+struct IOType {bool HasCompressedType(){return false;}};
+class IOFileBase {
+protected:
+ std::shared_ptr<std::vector<u8>> data; size_t start=0,size=0,pos=0;
+public:
+ IOFileBase()=default;
+ IOFileBase(std::shared_ptr<std::vector<u8>> d,size_t s,size_t n):data(d),start(s),size(n){}
+ virtual ~IOFileBase()=default;
+ bool IsOpen()const{return bool(data);}
+ explicit operator bool()const{return IsOpen();}
+ size_t GetSize()const{return size;}
+ IOType GetType()const{return {};}
+ size_t ReadAtBytes(void* out,size_t n,size_t off){if(!data||off>=size)return 0;n=std::min(n,size-off);std::memcpy(out,data->data()+start+off,n);return n;}
+ template<class T> size_t ReadAtArray(T* p,size_t n,size_t off){return ReadAtBytes(p,n*sizeof(T),off);}
+ size_t ReadBytes(void* out,size_t n){auto read=ReadAtBytes(out,n,pos);pos+=read;return read;}
+ bool Seek(s64 off,int origin){if(off<0)return false;pos=(origin==SEEK_CUR?pos:0)+off;return pos<=size;}
+ std::unique_ptr<IOFileBase> OpenCopy()const{return std::make_unique<IOFileBase>(data,start,size);}
+ friend class SubIOFile;
+};
+class IOFile:public IOFileBase {public:IOFile(const std::string& path,const char*) {auto it=fixtures.find(path);if(it!=fixtures.end()){data=it->second;size=data->size();}}};
+class SubIOFile:public IOFileBase {public:SubIOFile(std::unique_ptr<IOFileBase> f,size_t off,size_t n) {if(f&&off<=f->size&&n<=f->size-off){data=f->data;start=f->start+off;size=n;}}};
+}
+namespace HW::AES {
+using AESKey=std::array<u8,16>;
+enum KeySlotID {NCCHSecure1=0x2C,NCCHSecure2=0x25,NCCHSecure3=0x18,NCCHSecure4=0x1B};
+std::array<std::optional<AESKey>,64> xs,ys;
+AESKey generator;
+void InitKeys(){}
+void SetKeyY(size_t slot,const AESKey& key){ys[slot]=key;}
+bool IsNormalKeyAvailable(size_t slot){return xs[slot].has_value()&&ys[slot].has_value();}
+AESKey GetNormalKey(size_t slot);
+}
+// ACTUAL_ARITHMETIC
+namespace HW::AES { AESKey GetNormalKey(size_t slot){if(!IsNormalKeyAvailable(slot))return {};return Lrot128(Add128(Xor128(Lrot128(*xs[slot],2),*ys[slot]),generator),87);} }
+// ACTUAL_STRUCTURES
+namespace FileSys {
+std::optional<std::array<u8,16>> titleSeed;
+std::optional<std::array<u8,16>> GetSeed(u64){return titleSeed;}
+static const int kMaxSections=8,kBlockSize=0x200;
+class RomFSReader {public:virtual ~RomFSReader()=default;virtual size_t ReadFile(size_t,size_t,u8*)=0;virtual size_t GetSize()const=0;};
+class DirectRomFSReader:public RomFSReader {
+ std::unique_ptr<FileUtil::IOFileBase> file;
+ bool is_encrypted=false;
+ std::array<u8,16> key{},ctr{};
+ u64 crypto_offset=0;
+ static constexpr size_t cache_line_size=8192,cache_line_count=16;
+ Common::StaticLRUCache<size_t,std::array<u8,cache_line_size>,cache_line_count> cache;
+ size_t OffsetToPage(size_t o){return Common::AlignDown<size_t>(o,cache_line_size);}
+ std::vector<std::pair<size_t,size_t>> BreakupRead(size_t,size_t);
+public:
+ DirectRomFSReader(std::unique_ptr<FileUtil::IOFileBase> f):file(std::move(f)){}
+ DirectRomFSReader(std::unique_ptr<FileUtil::IOFileBase> f,const std::array<u8,16>& k,const std::array<u8,16>& c,u64 o):file(std::move(f)),is_encrypted(true),key(k),ctr(c),crypto_offset(o){}
+ size_t GetSize()const override{return file->GetSize();}
+ size_t ReadFile(size_t,size_t,u8*) override;
+};
+class LayeredFS:public RomFSReader {public:LayeredFS(std::shared_ptr<RomFSReader>,std::string,std::string){} size_t ReadFile(size_t,size_t,u8*)override{return 0;}size_t GetSize()const override{return 0;}};
+// ACTUAL_CLASS
+NCCHContainer::NCCHContainer(const std::string& path,u32,u32 part):partition(part),filepath(path){file=std::make_unique<FileUtil::IOFile>(path,"rb");}
+Loader::ResultStatus NCCHContainer::LoadOverrides(){return Loader::ResultStatus::Success;}
+Loader::ResultStatus NCCHContainer::LoadOverrideExeFSSection(const char*,std::vector<u8>&){return Loader::ResultStatus::ErrorNotUsed;}
+Loader::ResultStatus NCCHContainer::ReadOverrideRomFS(std::shared_ptr<RomFSReader>&){return Loader::ResultStatus::ErrorNotUsed;}
+// ACTUAL_NATIVE
+}
+using Key=std::array<u8,16>;
+Key derive(Key x,Key y){ // Independent integer formulation used by fixture encryption.
+ using N=unsigned __int128;N a=0,b=0,g=0;for(int i=0;i<16;++i){a=(a<<8)|x[i];b=(b<<8)|y[i];g=(g<<8)|HW::AES::generator[i];}
+ N z=(((a<<2)|(a>>126))^b)+g;z=(z<<87)|(z>>41);Key out{};for(int i=15;i>=0;--i){out[i]=u8(z);z>>=8;}return out;
+}
+Key counter(const NCCH_Header& h,int section){Key out{};for(int i=0;i<8;++i)out[i]=h.partition_id[h.version==1?i:7-i];if(h.version==1){u32 off=section==1?512:section==2?u32(h.exefs_offset)*512:u32(h.romfs_offset)*512;for(int i=0;i<4;++i)out[15-i]=u8(off>>(i*8));}else out[8]=section;return out;}
+void crypt(std::vector<u8>& bytes,size_t off,size_t n,Key key,Key ctr,size_t seek=0){CryptoPP::CTR_Mode<CryptoPP::AES>::Encryption e(key.data(),16,ctr.data());e.Seek(seek);e.ProcessData(bytes.data()+off,bytes.data()+off,n);}
+struct Fixture {
+ std::shared_ptr<std::vector<u8>> bytes;
+ std::vector<u8> code,icon,romfs;
+ Fixture(int version,int slot,bool seeded=false,bool encrypted=true,bool ncsd=false,bool compressed=false){
+  NCCH_Header h{};h.magic=FileUtil::MakeMagic('N','C','C','H');h.version=version;h.program_id=0x0004000000000100ULL;h.content_size=80;h.extended_header_size=0x400;h.exefs_offset=8;h.exefs_size=8;h.exefs_hash_region_size=1;h.romfs_offset=16;h.romfs_size=64;h.secondary_key_slot=slot;h.seed_crypto.Assign(seeded);h.no_crypto.Assign(!encrypted);
+  for(int i=0;i<16;++i)h.signature[i]=u8(i*3+5);for(int i=0;i<8;++i)h.partition_id[i]=u8(i+1);
+  Key primaryY{},secondaryY{};std::copy_n(h.signature,16,primaryY.begin());secondaryY=primaryY;
+  if(seeded){std::array<u8,32> in{};std::copy(primaryY.begin(),primaryY.end(),in.begin());std::copy(FileSys::titleSeed->begin(),FileSys::titleSeed->end(),in.begin()+16);std::array<u8,32> digest;CryptoPP::SHA256{}.CalculateDigest(digest.data(),in.data(),32);std::copy_n(digest.begin(),16,secondaryY.begin());}
+  const int sid=slot==0?0x2C:slot==1?0x25:slot==10?0x18:0x1B;
+  Key pk=derive(*HW::AES::xs[0x2C],primaryY),sk=derive(*HW::AES::xs[sid],secondaryY);
+  std::vector<u8> data(40960,0);ExHeader_Header ex{};ex.system_info.jump_id=h.program_id;ex.arm11_system_local_caps.program_id=h.program_id;ex.codeset_info.text.address=0x100000;ex.codeset_info.text.code_size=compressed?64:1024;ex.codeset_info.flags.flag=compressed?1:0;std::memcpy(data.data()+512,&ex,sizeof(ex));CryptoPP::SHA256{}.CalculateDigest(h.extended_header_hash,data.data()+512,h.extended_header_size);
+  ExeFs_Header fs{};std::memcpy(fs.section[0].name,".code",5);fs.section[0].size=1024;std::memcpy(fs.section[1].name,"icon",4);fs.section[1].offset=1024;fs.section[1].size=128;
+  code.resize(1024);icon.resize(128);romfs.resize(32768);for(size_t i=0;i<code.size();++i)code[i]=u8(i*7+11);for(size_t i=0;i<icon.size();++i)icon[i]=u8(i*13+3);for(size_t i=0;i<romfs.size();++i)romfs[i]=u8(i*31+i/7);
+  std::vector<u8> storedCode=code;
+  if(compressed){code.assign(64,0x42);storedCode={0x00,0x40,0x00,0xF0,0x00,0xF0,0x00,0xF0,0x42,0x42,0x42,0x1E,0x14,0x00,0x00,0x08,0x2C,0x00,0x00,0x00};fs.section[0].size=storedCode.size();}
+  std::copy(storedCode.begin(),storedCode.end(),data.begin()+4096+512);std::copy(icon.begin(),icon.end(),data.begin()+4096+512+1024);std::copy(romfs.begin(),romfs.end(),data.begin()+8192);
+  CryptoPP::SHA256{}.CalculateDigest(fs.hashes[7],storedCode.data(),storedCode.size());CryptoPP::SHA256{}.CalculateDigest(fs.hashes[6],icon.data(),icon.size());std::memcpy(data.data()+4096,&fs,sizeof(fs));CryptoPP::SHA256{}.CalculateDigest(h.exefs_super_block_hash,data.data()+4096,sizeof(fs));std::memcpy(data.data(),&h,sizeof(h));
+  if(encrypted){crypt(data,512,sizeof(ex),pk,counter(h,1));crypt(data,4096,sizeof(fs),pk,counter(h,2));crypt(data,4608,storedCode.size(),sk,counter(h,2),512);crypt(data,5632,icon.size(),pk,counter(h,2),1536);crypt(data,8192,romfs.size(),sk,counter(h,3));}
+  if(ncsd){std::vector<u8> wrapped(1024+data.size());NCSD_Header disk{};disk.magic=FileUtil::MakeMagic('N','C','S','D');disk.partitions[0].offset=2;disk.partitions[0].size=80;std::memcpy(wrapped.data(),&disk,sizeof(disk));std::copy(data.begin(),data.end(),wrapped.begin()+1024);data=std::move(wrapped);}
+  bytes=std::make_shared<std::vector<u8>>(std::move(data));FileUtil::fixtures["fixture"]=bytes;
+ }
+};
+void reset(){HW::AES::xs.fill(std::nullopt);HW::AES::ys.fill(std::nullopt);HW::AES::generator.fill(0x55);for(int slot:{0x2C,0x25,0x18,0x1B}){Key x{};for(int i=0;i<16;++i)x[i]=u8(slot*3+i);HW::AES::xs[slot]=x;}Key seed{};seed.fill(0x77);FileSys::titleSeed=seed;}
+void require(bool yes,const char* message){if(!yes)throw std::runtime_error(message);}
+void check(int version,int slot,bool seeded=false,bool encrypted=true,bool ncsd=false,bool compressed=false){
+ reset();Fixture f(version,slot,seeded,encrypted,ncsd,compressed);FileSys::NCCHContainer ncch("fixture",0,0);require(ncch.Load()==Loader::ResultStatus::Success,"container decryption failed");std::vector<u8> out;auto codeResult=ncch.LoadSectionExeFS(".code",out);if(codeResult!=Loader::ResultStatus::Success||out!=f.code){std::cerr<<"code result "<<int(codeResult)<<" size "<<out.size()<<" expected "<<f.code.size()<<" first "<<(out.empty()?0:int(out[0]))<<"\n";}require(codeResult==Loader::ResultStatus::Success&&out==f.code,"secondary-key code mismatch");require(ncch.LoadSectionExeFS("icon",out)==Loader::ResultStatus::Success&&out==f.icon,"primary-key icon mismatch");std::shared_ptr<FileSys::RomFSReader> rom;require(ncch.ReadRomFS(rom,false)==Loader::ResultStatus::Success,"RomFS open failed");
+ for(size_t n:{1,15,16,17,8191,8192,8193,12000})for(size_t offset:{0,1,15,16,8190,8191,10001,28671,28672,30000}){
+  std::vector<u8> data(n,0xAA);size_t expected=offset>=28672?0:std::min(n,size_t(28672)-offset);auto got=rom->ReadFile(offset,n,data.data());require(got==expected,"RomFS length mismatch");require(std::equal(data.begin(),data.begin()+got,f.romfs.begin()+std::min(size_t(32768),size_t(4096)+offset)),"RomFS plaintext mismatch");
+ }
+ std::cout<<"PASS NCCH version "<<version<<", slot "<<slot<<", seed "<<seeded<<", encrypted "<<encrypted<<", compressed "<<compressed<<", NCSD "<<ncsd<<"\n";
+}
+int main(){try{
+ for(int version:{0,1,2})for(int slot:{0,1,10,11})check(version,slot);
+ check(2,0,true);check(2,10,true);check(2,0,false,false);check(2,0,false,true,true);
+ check(2,0,false,true,true,true);
+ reset();Fixture plain(2,0,false,false);HW::AES::xs.fill(std::nullopt);FileSys::NCCHContainer plainNCCH("fixture",0,0);require(plainNCCH.Load()==Loader::ResultStatus::Success,"plain image required keys");
+ reset();Fixture missing(2,0);HW::AES::xs[0x2C].reset();FileSys::NCCHContainer m("fixture",0,0);require(m.Load()==Loader::ResultStatus::ErrorEncrypted,"missing primary key accepted");
+ reset();Fixture wrong(2,0);(*HW::AES::xs[0x2C])[0]^=1;FileSys::NCCHContainer w("fixture",0,0);require(w.Load()==Loader::ResultStatus::ErrorEncrypted,"wrong primary key accepted");
+ reset();Fixture seed(2,10,true);FileSys::titleSeed.reset();FileSys::NCCHContainer s("fixture",0,0);require(s.Load()==Loader::ResultStatus::ErrorEncrypted,"missing seed accepted");
+ reset();Fixture wrongSeed(2,10,true);(*FileSys::titleSeed)[0]^=1;FileSys::NCCHContainer sw("fixture",0,0);std::vector<u8> data;require(sw.Load()==Loader::ResultStatus::Success&&sw.LoadSectionExeFS(".code",data)==Loader::ResultStatus::ErrorEncrypted,"wrong seed accepted");
+ reset();Fixture method(2,1);HW::AES::xs[0x25].reset();FileSys::NCCHContainer me("fixture",0,0);require(me.Load()==Loader::ResultStatus::ErrorEncrypted,"missing secondary key accepted");
+ reset();Fixture unsupported(2,0);(*unsupported.bytes)[0x18B]=7;FileSys::NCCHContainer u("fixture",0,0);require(u.Load()==Loader::ResultStatus::ErrorEncrypted,"unknown crypto method accepted");
+ std::cout<<"PASS missing/wrong keys, missing/wrong seeds, and unknown method rejection\n";
+}catch(const std::exception& e){std::cerr<<e.what()<<"\n";return 1;} }
