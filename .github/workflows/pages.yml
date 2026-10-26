@@ -1,0 +1,91 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Generate deployment configuration
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+          from urllib.parse import urlsplit
+
+          repository = os.environ["GITHUB_REPOSITORY"]
+          server = os.environ["GITHUB_SERVER_URL"].rstrip("/")
+          parsed_server = urlsplit(server)
+          if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
+              raise ValueError("Invalid repository identifier")
+          owner, name = repository.split("/", 1)
+          if name.lower() == f"{owner.lower()}.github.io":
+              raise ValueError("Use a project repository so deployment cannot replace your GitHub homepage")
+          if (
+              parsed_server.scheme != "https"
+              or not parsed_server.hostname
+              or parsed_server.username
+              or parsed_server.password
+              or parsed_server.path
+              or parsed_server.query
+              or parsed_server.fragment
+          ):
+              raise ValueError("Invalid GitHub server URL")
+
+          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+          branch = event.get("repository", {}).get("default_branch") or os.environ.get("GITHUB_REF_NAME", "main")
+          if not isinstance(branch, str) or not branch:
+              raise ValueError("Invalid default branch")
+
+          config_path = Path("site/site-config.json")
+          config = json.loads(config_path.read_text(encoding="utf-8")) if config_path.exists() else {}
+          if not isinstance(config, dict):
+              raise ValueError("Site configuration must be a JSON object")
+          config.update(
+              repositoryUrl=f"{server}/{repository}",
+              defaultBranch=branch,
+              # Publishing documentation does not establish that an IPA exists.
+              releaseReady=False,
+          )
+          config_path.parent.mkdir(parents=True, exist_ok=True)
+          config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy project site
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,17 @@
+.DS_Store
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.ipa
+*.xcarchive
+Vendor/
+Frameworks/*
+!Frameworks/README.md
+project.native.yml
+Tandem.xcodeproj/
+TandemNative.xcodeproj/
+__pycache__/
+dist/
+*.log
+*.xcresult/

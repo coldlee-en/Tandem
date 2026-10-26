@@ -1,0 +1,101 @@
+name: Build unsigned IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Native includes both emulator cores; interface contains no emulator binaries."
+        required: true
+        default: native
+        type: choice
+        options: [native, interface]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ipa-${{ github.ref }}-${{ inputs.mode }}
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    name: ${{ inputs.mode }} · unsigned arm64 IPA
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26 or later
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+          candidates = []
+          for app in Path('/Applications').glob('Xcode*.app'):
+              developer = app / 'Contents/Developer'
+              try:
+                  output = subprocess.check_output([str(developer / 'usr/bin/xcodebuild'), '-version'], text=True)
+                  match = re.search(r'Xcode (\d+)(?:\.(\d+))?', output)
+                  if match and int(match.group(1)) >= 26:
+                      candidates.append(((int(match.group(1)), int(match.group(2) or 0)), developer))
+              except (OSError, subprocess.CalledProcessError):
+                  continue
+          if not candidates:
+              raise SystemExit('This project requires Xcode 26+ / Swift 6.2. Select a macOS runner with that Xcode installed.')
+          selected = max(candidates, key=lambda item: item[0])[1]
+          subprocess.run(['sudo', 'xcode-select', '--switch', str(selected)], check=True)
+          subprocess.run(['xcodebuild', '-version'], check=True)
+          PY
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up .NET for native Switch core
+        if: inputs.mode == 'native'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install build tools
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: |
+          brew install xcodegen git-lfs
+          git lfs install --local
+
+      - name: Test local library
+        run: swift test --package-path Packages/EmulationKit
+
+      - name: Build and package compiled iOS app
+        env:
+          TANDEM_IPA_MODE: ${{ inputs.mode }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/tandem-ipa"
+          bash scripts/build_ipa.sh "--$TANDEM_IPA_MODE" --output "$RUNNER_TEMP/tandem-ipa" \
+            2>&1 | tee "$RUNNER_TEMP/tandem-ipa/prepare-and-build.log"
+
+      - name: Upload successful IPA and manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tandem-${{ inputs.mode }}-unsigned-IPA
+          path: |
+            ${{ runner.temp }}/tandem-ipa/*.ipa
+            ${{ runner.temp }}/tandem-ipa/*.json
+            ${{ runner.temp }}/tandem-ipa/*.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tandem-${{ inputs.mode }}-build-logs
+          path: |
+            ${{ runner.temp }}/tandem-ipa/**/*.log
+            ${{ runner.temp }}/tandem-ipa/**/*.xcresult
+          if-no-files-found: ignore
+          retention-days: 7

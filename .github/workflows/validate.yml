@@ -1,0 +1,21 @@
+name: Validate
+on:
+  push:
+  pull_request:
+jobs:
+  ios-interface:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test ROM library
+        run: swift test --package-path Packages/EmulationKit
+      - name: Install project generator
+        run: brew install xcodegen
+      - name: Generate interface project
+        run: xcodegen generate
+      - name: Build iOS interface and test bundle
+        run: >-
+          xcodebuild -project Tandem.xcodeproj -scheme Tandem
+          -configuration Debug -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO build-for-testing

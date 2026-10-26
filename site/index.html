@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101e24">
+  <meta name="description" content="Tandem is an experimental native iOS project bringing Nintendo 3DS and Nintendo Switch emulator cores into one considered home.">
+  <title>Tandem — A little more room to play</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <script src="./site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="wordmark" href="./" aria-label="Tandem home"><span class="brand-icon" aria-hidden="true"><i></i><i></i></span>Tandem<span class="wordmark-dot">.</span></a>
+    <nav aria-label="Main navigation"><a href="#experience">The experience</a><a href="#under-the-hood">The cores</a><a class="nav-build" href="./build.html">Build guide <span aria-hidden="true">↗</span></a></nav>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Native iOS. Open source. In progress.</p>
+        <h1 id="hero-title">A little more<br>room to <em>play.</em></h1>
+        <p class="hero-description">Two handheld worlds, one considered home. Tandem brings 3DS and Switch emulator integrations to a native iPhone and iPad interface.</p>
+        <div class="hero-actions"><a class="button primary" href="./build.html">Start with the source <span aria-hidden="true">↗</span></a><a class="text-link" href="#experience">Take a look <span aria-hidden="true">↓</span></a></div>
+        <p class="release-note"><span aria-hidden="true">◌</span> Experimental source. No verified IPA release yet.</p>
+      </div>
+      <figure class="hero-art">
+        <div class="art-orbit orbit-one" aria-hidden="true"></div><div class="art-orbit orbit-two" aria-hidden="true"></div>
+        <span class="art-label label-top" aria-hidden="true"><span>01 / 02</span> A familiar feeling.</span>
+        <img src="./console.svg" alt="Stylized dual-screen handheld with a mint mountain landscape, an interface concept rather than gameplay." width="720" height="600" fetchpriority="high">
+        <span class="art-tag" aria-hidden="true"><span class="spark">✳</span> Made for the small screen.</span>
+        <figcaption>Handheld illustration · Interface concept</figcaption>
+      </figure>
+    </section>
+
+    <div class="platform-bar"><div class="wrap platform-content"><span class="platform-label">Built around the way you play</span><span>iPhone + iPad</span><span class="bar-dot" aria-hidden="true">·</span><span>SwiftUI + Metal</span><span class="bar-dot" aria-hidden="true">·</span><span>Touch + controller</span><span class="bar-arrow" aria-hidden="true">↗</span></div></div>
+
+    <section class="experience wrap section-space" id="experience" aria-labelledby="experience-title">
+      <div class="section-heading"><p class="eyebrow">A home for the handheld era</p><h2 id="experience-title">Less looking around.<br>More finding your next game.</h2><p>A small, deliberate interface for a big undertaking. The library and controls are implemented; native gameplay still needs device validation.</p></div>
+      <div class="feature-grid">
+        <article class="feature-card library-card"><div class="feature-top"><span class="feature-number">01</span><span class="small-label">Your collection</span></div><div class="library-concept" aria-label="Illustration of an empty library with All games, 3DS, and Switch filters"><div class="mock-library-head"><span class="mini-logo" aria-hidden="true">▤</span><strong>Your little library.</strong><span aria-hidden="true">+</span></div><div class="mock-filters"><span class="selected">All games</span><span>3DS</span><span>Switch</span></div><div class="mock-empty"><span aria-hidden="true">▧</span><p>Make room for play.</p><small>Import a game to begin.</small></div><span class="concept-caption">Interface concept</span></div><h3>Your games, together.</h3><p>Import from Files, find a title, and pick up where you left off. Local storage, system filters, and last-played dates keep the library in order.</p></article>
+        <article class="feature-card controls-card"><div class="feature-top"><span class="feature-number">02</span><span class="small-label">Find your feel</span></div><div class="control-concept" aria-hidden="true"><div class="control-ring"><div class="stick-cap"></div></div><div class="control-diamond"><span>X</span><span>Y</span><span>A</span><span>B</span></div></div><h3>Every input considered.</h3><p>Hold a direction and a button together. Use both analog sticks, the touchscreen, or a compatible Bluetooth controller. Leave the app and the session pauses.</p></article>
+        <article class="feature-card display-card"><div class="feature-top"><span class="feature-number">03</span><span class="small-label">Native by design</span></div><div class="display-concept" aria-hidden="true"><div class="display-window"><span class="display-corner">METAL</span><div class="display-wave"></div><span class="display-corner bottom">400 × 240</span></div><div class="display-small"></div></div><h3>Two screens. One surface.</h3><p>Paired 3DS displays and a Switch viewport use real Metal layers. Touch coordinates and display resizing connect directly to the selected core.</p></article>
+      </div>
+    </section>
+
+    <section class="cores section-space" id="under-the-hood" aria-labelledby="cores-title"><div class="wrap">
+      <div class="section-heading horizontal"><div><p class="eyebrow">Good foundations. Shared credit.</p><h2 id="cores-title">Standing on<br>the work of many.</h2></div><p>Tandem is a new iOS frontend and integration project. Emulation comes from existing open-source cores, with pinned source and checked patches.</p></div>
+      <div class="core-grid">
+        <article class="core-card"><div class="core-symbol dual-symbol" aria-hidden="true"><span></span><span></span></div><div class="core-copy"><span class="small-label">Nintendo 3DS</span><h3>Cytrus <span>/ Azahar</span></h3><p>The iOS 3DS core from the Folium project, built on Azahar and Citra. The adapter selects the interpreter unless the process has debugger/JIT state.</p><a class="text-link" href="https://github.com/folium-app/Cytrus">Meet the core <span aria-hidden="true">↗</span></a></div></article>
+        <article class="core-card"><div class="core-symbol switch-symbol" aria-hidden="true"><span>·</span><span>··</span></div><div class="core-copy"><span class="small-label">Nintendo Switch</span><h3>MeloNX <span>/ Ryujinx</span></h3><p>A NativeAOT integration with the MeloNX iOS port of Ryujinx. Requires a physical device, an embedded native core, and working JIT mappings.</p><a class="text-link" href="https://github.com/AzureDominus/melonx">Meet the core <span aria-hidden="true">↗</span></a></div></article>
+      </div>
+      <p class="core-footnote">Nintendo 3DS and Nintendo Switch are trademarks of Nintendo. Tandem is an independent project.</p>
+    </div></section>
+
+    <section class="progress-section wrap section-space" id="status" aria-labelledby="status-title"><div class="section-heading horizontal"><div><p class="eyebrow">Where things stand</p><h2 id="status-title">Early days.<br>Clear expectations.</h2></div><p>This is an experimental source project. The interface and integrations are written; a playable release requires a successful Mac build and physical-device testing.</p></div><div class="progress-grid"><article><span class="progress-icon done" aria-hidden="true">✓</span><h3>Library foundation</h3><p>File import, persistence, rollback, and recovery tests pass on Linux.</p><span class="status-pill">Tested package</span></article><article><span class="progress-icon" aria-hidden="true">↗</span><h3>Native app + cores</h3><p>iOS compilation, native linking, and gameplay remain unverified.</p><span class="status-pill neutral">Needs a Mac + device</span></article><article><span class="progress-icon" aria-hidden="true">◌</span><h3>IPA distribution</h3><p data-release-description>No verified, signed IPA is available. Start with the source and build guide.</p><span class="status-pill neutral" data-release-status>Source preview</span></article></div></section>
+
+    <section class="get-started wrap" id="get-started" aria-labelledby="start-title"><div class="start-panel"><div><p class="eyebrow">For the curious builders</p><h2 id="start-title">Your next chapter<br>starts with a build.</h2><p>macOS, Xcode 26+, and a little patience. Begin with the interface, then prepare the emulator cores for your own device.</p><div class="hero-actions"><a class="button primary" href="./build.html">Read the build guide <span aria-hidden="true">↗</span></a><a class="button secondary" data-repository-link hidden>View source <span aria-hidden="true">↗</span></a><a class="button secondary" data-release-link hidden>View releases <span aria-hidden="true">↗</span></a></div></div><div class="start-steps"><div><span>01</span><p>Get the source<small>A native iOS development project.</small></p></div><div><span>02</span><p>Prepare your cores<small>Build from pinned upstream source.</small></p></div><div><span>03</span><p>Sign. Run. Verify.<small>Test on your own iPhone or iPad.</small></p></div></div></div></section>
+  </main>
+  <footer class="site-footer wrap"><div><a class="wordmark" href="./"><span class="brand-icon" aria-hidden="true"><i></i><i></i></span>Tandem<span class="wordmark-dot">.</span></a><p>A little more room to play.</p></div><div class="footer-right"><p>Open source · AGPL-3.0-or-later</p><p>Upstream projects retain their own licenses.</p><a href="./build.html#notices">Source, licenses &amp; requirements <span aria-hidden="true">↗</span></a></div></footer>
+</body>
+</html>

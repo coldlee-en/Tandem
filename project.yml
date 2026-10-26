@@ -1,0 +1,62 @@
+name: Tandem
+options:
+  bundleIdPrefix: app.tandem
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "26.0"
+  createIntermediateGroups: true
+packages:
+  EmulationKit:
+    path: Packages/EmulationKit
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    SWIFT_OBJC_INTEROP_MODE: objcxx
+    CLANG_CXX_LANGUAGE_STANDARD: gnu++23
+    TARGETED_DEVICE_FAMILY: "1,2"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  Tandem:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+        excludes: [Info.plist]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.tandem.emulator
+        PRODUCT_NAME: Tandem
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: "0.1.0"
+        SWIFT_OBJC_BRIDGING_HEADER: App/Native/TandemRuntime.h
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: App/Info.plist
+        SUPPORTS_MACCATALYST: NO
+        LD_RUNPATH_SEARCH_PATHS: ["$(inherited)", "@executable_path/Frameworks"]
+    dependencies:
+      - package: EmulationKit
+      - sdk: Metal.framework
+      - sdk: QuartzCore.framework
+      - sdk: GameController.framework
+      - sdk: AVFoundation.framework
+  TandemTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: app.tandem.emulator.tests
+    dependencies:
+      - target: Tandem
+      - package: EmulationKit
+schemes:
+  Tandem:
+    build:
+      targets:
+        Tandem: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets: [TandemTests]

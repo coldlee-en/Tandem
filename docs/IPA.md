@@ -1,0 +1,109 @@
+# Building an IPA
+
+An IPA requires a real iOS device build from Xcode on macOS. This repository's
+Linux development environment cannot compile that application. The scripts do
+not create a placeholder IPA when the compiler or native dependencies are
+unavailable.
+
+## Native build
+
+Install Xcode 26 or later with the iPhoneOS SDK, XcodeGen, Python 3, Git/Git LFS,
+and a .NET 8 SDK on the Mac. Native preparation fetches the pinned graphics
+headers automatically into `Vendor/GraphicsHeaders/include`; a separate Vulkan
+SDK installation is not required. To use an existing compatible SDK instead,
+set `TANDEM_VULKAN_INCLUDE` to its `macOS/include` directory before running.
+
+```sh
+bash scripts/build_ipa.sh --native --output dist/ipa
+```
+
+Native is the default mode. It prepares the pinned Cytrus source, builds the
+MeloNX NativeAOT core, generates the native Xcode project, and archives the
+`Tandem` scheme in Release configuration for `generic/platform=iOS`.
+The Xcode invocation explicitly sets `CODE_SIGNING_ALLOWED=NO` and
+`CODE_SIGNING_REQUIRED=NO`; no Apple account, certificate, or provisioning
+profile is requested.
+
+After a successful archive, the script validates and packages
+`Tandem.xcarchive/Products/Applications/Tandem.app`. It requires an arm64 iOS
+Mach-O executable and the native runtime libraries. A failed compiler, linker,
+core build, or validation step stops the script before producing a new IPA.
+
+Outputs:
+
+- `dist/ipa/Tandem-native-unsigned.ipa`
+- `dist/ipa/Tandem-native-unsigned.manifest.json`
+- A `dist/ipa/build-native-*` directory containing the actual Xcode archive,
+  DerivedData, and `xcodebuild.log`.
+
+The manifest records build mode, source revision, SHA-256, bundle/version
+information, platform, and unsigned status. CI supplies `GITHUB_SHA`; a local
+Git checkout uses its HEAD revision. A source archive without Git metadata is
+identified as `unversioned-source`.
+
+## GitHub Actions
+
+The repository includes the manually triggered
+[Build unsigned IPA workflow](../.github/workflows/build-ipa.yml). In the
+repository's **Actions** tab, select **Build unsigned IPA**, choose **Run
+workflow**, and keep **mode: native** to include both emulator integrations.
+The explicit **interface** choice produces the interface-only artifact described
+below.
+
+The workflow uses a `macos-15` runner, selects an installed Xcode 26 or later,
+sets up Python and .NET 8, installs XcodeGen/Git LFS, tests the local library,
+and calls `build_ipa.sh`. No signing secrets are required. The native job also
+needs public upstream package, source, and Git LFS downloads to succeed; a
+missing package or native compiler error fails the job rather than producing
+an interface artifact under the native name.
+
+After a successful run, download **Tandem-native-unsigned-IPA** from the run's
+Artifacts section. It contains the IPA and build manifest. Build diagnostics
+are uploaded separately as **Tandem-native-build-logs**. IPA artifacts are
+retained for 14 days, and diagnostics for 7 days. A successful Actions run
+establishes compilation and packaging; device installation and gameplay remain
+separate checks. Until that job has completed, there is no compiled IPA to
+download.
+
+## Interface build
+
+This explicit option compiles the native iOS interface without emulator cores:
+
+```sh
+bash scripts/build_ipa.sh --interface --output dist/ipa
+```
+
+It produces `Tandem-interface-unsigned.ipa` and the corresponding manifest.
+This artifact supports interface testing and cannot run games. Its filename
+and manifest identify it separately from the native emulator integration.
+
+## Installation
+
+The unsigned IPA is **not directly installable**. A compatible sideloading
+workflow must re-sign the app and all embedded frameworks/libraries for the
+destination device. Existing upstream library signatures may be present inside
+an unsigned archive and must also be replaced. The build scripts do not claim
+that an unsigned artifact has been installed or accepted by iOS.
+
+Switch still requires a suitable JIT-enabled process after installation.
+Successful compilation does not establish game compatibility or usable
+performance. Device validation is tracked separately in
+[DEVICE_TESTING.md](DEVICE_TESTING.md).
+
+## Packaging checks
+
+`scripts/package_ipa.py` packages only an existing `.app`; it is not a compiler.
+It checks the bundle metadata, device architecture/platform, executable load
+commands, required native libraries, permissions, and symlink containment.
+The ZIP contains `Payload/Tandem.app` and preserves contained framework symlinks
+and Unix permissions.
+
+Run its structural unit tests on any Python 3 host:
+
+```sh
+python3 scripts/package_ipa.py --self-test
+```
+
+These tests use explicitly synthetic Mach-O parser fixtures. They verify the
+packager's rejection and ZIP behavior; they do not constitute an iOS build or
+gameplay test.
