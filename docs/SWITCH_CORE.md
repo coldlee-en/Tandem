@@ -5,10 +5,11 @@ pinned to [`AzureDominus/melonx` at `55f84af15144e40d7fbe8984747855534d2a8ec1`](
 The source contains a NativeAOT .NET core and its own Swift frontend. Tandem uses
 the native core with its own interface.
 
-**Status:** the Switch NativeAOT runtime has compiled on macOS, and its cached
-artifact has been verified. The final native app archive and IPA remain pending.
-Runtime behavior, JIT, and gameplay have not been verified on an iPhone. This is
-a development integration, not a tested compatibility claim.
+**Status:** the Switch NativeAOT runtime and complete native iOS app have compiled
+and archived on macOS. An [unsigned development IPA](IPA.md) is available from
+the successful Actions build and requires re-signing for sideloading. Runtime
+behavior, JIT, and gameplay remain unverified on an iPhone. This is a development
+integration, not a tested compatibility claim.
 
 ## Build requirements
 

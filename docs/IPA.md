@@ -5,6 +5,26 @@ Linux development environment cannot compile that application. The scripts do
 not create a placeholder IPA when the compiler or native dependencies are
 unavailable.
 
+## Available development artifact
+
+[Native build 40411695317 succeeded](https://github.com/coldlee-en/Tandem/actions/runs/40411695317)
+at source `205140a`. Download the
+[unsigned native IPA artifact](https://github.com/coldlee-en/Tandem/actions/runs/40411695317/artifacts/12694770502)
+from Actions. The artifact ZIP contains the IPA and a manifest with its SHA-256; GitHub
+sign-in may be required, and Actions retention limits apply. This is an Actions
+artifact, not a GitHub Release.
+
+Verified IPA SHA-256:
+
+```text
+00e9f9d066dfc27b81de2bfaf532ab9a1abfbefc6e270e1dbfd63101839192bc
+```
+
+All 21 packaged Mach-O images have minimum deployment versions at or below
+iOS 17, and the bundled dependency-closure check passed. The app and embedded
+native code still require re-signing before sideloading. Device gameplay and
+JIT behavior remain unverified; Switch requires working JIT after installation.
+
 ## Native build
 
 Install Xcode 26 or later with the iPhoneOS SDK, XcodeGen, Python 3, Git/Git LFS,
@@ -62,8 +82,8 @@ Artifacts section. It contains the IPA and build manifest. Build diagnostics
 are uploaded separately as **Tandem-native-build-logs**. IPA artifacts are
 retained for 14 days, and diagnostics for 7 days. A successful Actions run
 establishes compilation and packaging; device installation and gameplay remain
-separate checks. Until that job has completed, there is no compiled IPA to
-download.
+separate checks. The successful native build linked above produced a real
+unsigned IPA; future runs produce an artifact only after their own checks pass.
 
 ## Interface build
 

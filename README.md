@@ -4,11 +4,12 @@ A native iOS development project for Nintendo 3DS and Nintendo Switch emulation,
 using Cytrus/Azahar and the MeloNX iOS port of Ryujinx. SwiftUI, Metal surfaces,
 GameController, and local file storage. iOS 17 or later.
 
-**This is an experimental development project, not a tested or signed emulator
-release.** All 16 ROM-library tests pass on macOS, the iOS interface compiles,
-and all 4 session-lifecycle tests pass in the iOS simulator in macOS CI.
-The final native archive and IPA build are still pending; on-device execution,
-performance, and game compatibility remain unverified. There is no IPA available.
+**An unsigned native development IPA is available** from the
+[successful Actions build](https://github.com/coldlee-en/Tandem/actions/runs/40411695317/artifacts/12694770502).
+It includes both emulator integrations and must be re-signed for sideloading.
+All 16 ROM-library tests and 4 iOS simulator session tests pass in macOS CI.
+Physical-device execution, performance, and game compatibility remain unverified;
+Switch requires working JIT after installation. See [IPA.md](docs/IPA.md).
 
 ## What is implemented
 
@@ -74,10 +75,11 @@ xcodebuild -project Tandem.xcodeproj -scheme Tandem \
 
 Choose an installed simulator name for the last command. The simulator exercises
 the interface/lifecycle tests; it does not run the native emulator cores.
-The [Validate workflow passed](https://github.com/coldlee-en/Tandem/actions/runs/40408625904),
+The [Validate workflow passed](https://github.com/coldlee-en/Tandem/actions/runs/40411690350),
 including all 16 library tests on macOS, interface compilation, and execution of
 all 4 session-lifecycle tests in the iOS simulator with 0 failures. Those tests
-use an injected core; native archiving, signing, and gameplay require separate validation.
+use an injected core. The [native archive and IPA build also passed](https://github.com/coldlee-en/Tandem/actions/runs/40411695317);
+signing, installation, and gameplay require separate device validation.
 See [device acceptance checks](docs/DEVICE_TESTING.md) and
 [the Switch integration details](docs/SWITCH_CORE.md).
 

@@ -5,10 +5,14 @@ Current evidence as of 2026-10-26:
 | macOS CI check | Result |
 | --- | --- |
 | EmulationKit library tests | **16 passed** |
-| iOS interface compilation and simulator session tests | Passed in [Validate](https://github.com/coldlee-en/Tandem/actions/runs/40408625904); all **4 session-lifecycle tests executed, 0 failures** |
+| iOS interface compilation and simulator session tests | Passed in [Validate](https://github.com/coldlee-en/Tandem/actions/runs/40411690350); all **4 session-lifecycle tests executed, 0 failures**, plus 16 library tests |
 | Switch NativeAOT runtime | Compiled for iOS arm64; cached artifact verified |
 | Cytrus static archive | `libCytrus.a` compiled in [native build](https://github.com/coldlee-en/Tandem/actions/runs/40405335353) |
-| Final native app archive and IPA | Pending; [corrected native build](https://github.com/coldlee-en/Tandem/actions/runs/40408070813) retries the final link after fixing raw-dylib search paths |
+| Final native app archive and IPA | [Build 40411695317 passed](https://github.com/coldlee-en/Tandem/actions/runs/40411695317) at source `205140a`; [unsigned native artifact](https://github.com/coldlee-en/Tandem/actions/runs/40411695317/artifacts/12694770502) downloaded and checksum verified |
+| Packaged Mach-O inspection | All 21 images have deployment minimums at or below iOS 17; bundled dependency-closure check passed |
+
+Native IPA SHA-256:
+`00e9f9d066dfc27b81de2bfaf532ab9a1abfbefc6e270e1dbfd63101839192bc`.
 
 Additional checks performed in the Linux workspace:
 
@@ -39,7 +43,8 @@ macOS CI result establishes interface compilation and successful execution of al
 4 session-lifecycle tests in the iOS simulator. Those tests use an injected core;
 they do not run the native emulator cores.
 
-No IPA is available. The final native app archive, signing, device JIT, firmware
-installation, graphics/audio/input during gameplay, saving, title compatibility,
-performance, memory limits, and physical-device lifecycle behavior remain
-unverified. Follow [DEVICE_TESTING.md](DEVICE_TESTING.md) before preparing a release.
+The IPA is an unsigned development artifact. Re-signing, device installation, JIT,
+firmware installation, graphics/audio/input during gameplay, saving, title
+compatibility, performance, memory limits, and physical-device lifecycle behavior
+remain unverified. Static deployment/dependency checks do not establish runtime
+compatibility. Follow [DEVICE_TESTING.md](DEVICE_TESTING.md) for device validation.

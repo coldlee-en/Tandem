@@ -7,11 +7,12 @@ persistence, failed-write rollback, path/symlink rejection, and interrupted-dele
 recovery. The iOS interface compiles in macOS CI, and all 4 session-lifecycle
 tests pass in the iOS simulator with 0 failures.
 
-The Switch NativeAOT runtime has compiled on macOS and its cached artifact has
-been verified. Cytrus also compiled into `libCytrus.a`. The final native app
-archive and IPA remain pending. No IPA is available, and signing, physical-device
-execution, performance, and game compatibility remain unverified. See
-[VALIDATION.md](VALIDATION.md) for the current evidence.
+The complete native app, including Switch NativeAOT and Cytrus, archived and
+packaged successfully in [macOS CI](https://github.com/coldlee-en/Tandem/actions/runs/40411695317).
+The [unsigned development IPA](https://github.com/coldlee-en/Tandem/actions/runs/40411695317/artifacts/12694770502)
+must be re-signed for sideloading. Signing, physical-device execution, performance,
+and game compatibility remain unverified; Switch requires JIT. See
+[VALIDATION.md](VALIDATION.md) and [IPA.md](IPA.md) for evidence and installation requirements.
 
 ## Interface project
 
