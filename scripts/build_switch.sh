@@ -93,7 +93,7 @@ def verify_native_files():
     validator = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(validator)
     for relative in required[:4]:
-        validator.validate_macho(root / relative, file_type=6)
+        validator.validate_macho(root / relative, file_type=6, deployment_target="17.0")
     with (root / "SDL2.xcframework/Info.plist").open("rb") as stream:
         info = plistlib.load(stream)
     devices = [entry for entry in info.get("AvailableLibraries", [])
@@ -105,7 +105,7 @@ def verify_native_files():
     entry = devices[0]
     binary = root / "SDL2.xcframework" / entry["LibraryIdentifier"] / entry["LibraryPath"] / "SDL2"
     binary.resolve(strict=True).relative_to((root / "SDL2.xcframework").resolve())
-    validator.validate_macho(binary, file_type=6)
+    validator.validate_macho(binary, file_type=6, deployment_target="17.0")
 
 expected = {
     "format_version": 2,
@@ -174,11 +174,25 @@ done
 [[ -f "$SCRIPT_DIR/patch_switch.py" ]] || fail "Missing scripts/patch_switch.py; restore the complete Tandem source checkout."
 python3 "$SCRIPT_DIR/patch_switch.py" "$TANDEM_MELONX_SOURCE"
 
+# NativeAOT's net8.0 iOS linker does not set a deployment version. Without an
+# explicit clang target it can inherit the selected SDK's minimum (e.g. 26.2).
+# Inject the actual LinkerArg item; a similarly named -p: property is not an item.
+TANDEM_SWITCH_LINKER_TARGETS="$(cd -- "$TANDEM_MELONX_SOURCE" && pwd)/.tandem-build/ios-deployment.targets"
+mkdir -p -- "$(dirname -- "$TANDEM_SWITCH_LINKER_TARGETS")"
+cat > "$TANDEM_SWITCH_LINKER_TARGETS" <<'XML'
+<Project>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'Ryujinx.Headless.SDL2' and '$(RuntimeIdentifier)' == 'ios-arm64'">
+    <LinkerArg Include="-target arm64-apple-ios17.0" />
+  </ItemGroup>
+</Project>
+XML
+
 (
     cd -- "$TANDEM_MELONX_SOURCE"
-    dotnet publish src/Ryujinx.Headless.SDL2/Ryujinx.Headless.SDL2.csproj \
+    IPHONEOS_DEPLOYMENT_TARGET=17.0 dotnet publish src/Ryujinx.Headless.SDL2/Ryujinx.Headless.SDL2.csproj \
         -c Release -r ios-arm64 --self-contained true \
         -p:ExtraDefineConstants=DISABLE_UPDATER \
+        "-p:CustomAfterMicrosoftCommonTargets=$TANDEM_SWITCH_LINKER_TARGETS" \
         "-p:XCodePath=$TANDEM_XCODE_PATH/"
 )
 

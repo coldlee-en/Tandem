@@ -25,7 +25,14 @@ class PackagingError(ValueError):
     pass
 
 
-def validate_macho(path: Path, *, file_type: int = 2) -> dict:
+def version_tuple(value: str) -> tuple[int, int, int]:
+    if not isinstance(value, str) or not re.fullmatch(r"\d+\.\d+(?:\.\d+)?", value):
+        raise PackagingError("Invalid iOS deployment target.")
+    parts = tuple(map(int, value.split(".")))
+    return (parts + (0, 0))[:3]
+
+
+def validate_macho(path: Path, *, file_type: int = 2, deployment_target: str | None = None) -> dict:
     """Check an arm64 iOS Mach-O slice, including bounded load commands.
 
     This establishes executable format and target platform, not behavioral
@@ -64,6 +71,7 @@ def validate_macho(path: Path, *, file_type: int = 2) -> dict:
         raise PackagingError("The Mach-O load-command table is invalid or truncated.")
     position = slice_start + 32
     ios_platform, text_segment, entry_point = False, False, False
+    minimum_version = None
     for _ in range(count):
         if position + 8 > commands_end:
             raise PackagingError("A Mach-O load command is truncated.")
@@ -86,10 +94,14 @@ def validate_macho(path: Path, *, file_type: int = 2) -> dict:
             if platform != 2:  # PLATFORM_IOS, excluding IOSSIMULATOR == 7
                 raise PackagingError("The native binary targets a platform other than iOS devices.")
             ios_platform = True
+            encoded = struct.unpack_from("<I", data, position + 12)[0]
+            minimum_version = (encoded >> 16, (encoded >> 8) & 255, encoded & 255)
         elif command == 0x25:  # LC_VERSION_MIN_IPHONEOS
             if size < 16:
                 raise PackagingError("The Mach-O minimum-version command is truncated.")
             ios_platform = True
+            encoded = struct.unpack_from("<I", data, position + 8)[0]
+            minimum_version = (encoded >> 16, (encoded >> 8) & 255, encoded & 255)
         elif command == 0x80000028:  # LC_MAIN
             if size < 24:
                 raise PackagingError("The Mach-O entry-point command is truncated.")
@@ -102,7 +114,12 @@ def validate_macho(path: Path, *, file_type: int = 2) -> dict:
         raise PackagingError("The binary has no complete iOS executable text/load-command layout.")
     if file_type == 2 and not entry_point:
         raise PackagingError("The device executable has no LC_MAIN entry point.")
-    return {"architecture": "arm64", "platform": "iOS", "file_type": actual_type}
+    if minimum_version is None or minimum_version[0] == 0:
+        raise PackagingError("The binary has no valid minimum iOS version.")
+    minimum = ".".join(map(str, minimum_version))
+    if deployment_target is not None and minimum_version > version_tuple(deployment_target):
+        raise PackagingError(f"{path.name} requires iOS {minimum}, above app deployment target {deployment_target}.")
+    return {"architecture": "arm64", "platform": "iOS", "file_type": actual_type, "minimum_ios": minimum}
 
 
 def app_entries(app: Path) -> list[Path]:
@@ -155,7 +172,9 @@ def validate_app(app: Path, mode: str) -> tuple[Path, dict, list[Path]]:
     if info.get("CFBundlePackageType") != "APPL" or not isinstance(platforms, list) or "iPhoneOS" not in platforms:
         raise PackagingError("Info.plist does not identify an iPhoneOS application.")
     binary = app / executable
-    validate_macho(binary)
+    deployment_target = info.get("MinimumOSVersion")
+    version_tuple(deployment_target)
+    validate_macho(binary, deployment_target=deployment_target)
     if not binary.stat().st_mode & 0o111:
         raise PackagingError("The application binary does not have executable permissions.")
     if mode == "native":
@@ -166,9 +185,16 @@ def validate_app(app: Path, mode: str) -> tuple[Path, dict, list[Path]]:
         required += [f"{name}.framework/{name}" for name in
                      ["libavcodec", "libavdevice", "libavfilter", "libavformat", "libavutil", "libswresample", "libswscale"]]
         for relative in required:
-            validate_macho(app / "Frameworks" / relative, file_type=6)
+            validate_macho(app / "Frameworks" / relative, file_type=6, deployment_target=deployment_target)
     elif (app / "Frameworks/Ryujinx.Headless.SDL2.dylib").exists():
         raise PackagingError("The interface artifact unexpectedly contains a Switch core; check the selected project.")
+    # Include optional and transitive images, not just the required core list.
+    for entry in entries:
+        if entry.is_file() and not entry.is_symlink() and entry != binary:
+            with entry.open("rb") as stream:
+                magic = stream.read(4)
+            if magic in (b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xca\xfe\xba\xbf"):
+                validate_macho(entry, file_type=6, deployment_target=deployment_target)
     return app, info, entries
 
 
@@ -339,6 +365,23 @@ class PackagingTests(unittest.TestCase):
     def test_native_mode_requires_real_core_libraries(self):
         with self.assertRaises(PackagingError):
             validate_app(self.app, "native")
+
+    def test_newer_embedded_deployment_target_rejected(self):
+        framework = self.app / "Frameworks/Optional.framework/Optional"
+        framework.parent.mkdir(parents=True)
+        data = bytearray(self.fixture())
+        struct.pack_into("<I", data, 12, 6)
+        struct.pack_into("<I", data, 32 + 72 + 12, (26 << 16) | (2 << 8))
+        framework.write_bytes(data)
+        with self.assertRaisesRegex(PackagingError, "requires iOS 26.2.0"):
+            validate_app(self.app, "interface")
+
+    def test_newer_main_deployment_target_rejected(self):
+        data = bytearray(self.fixture())
+        struct.pack_into("<I", data, 32 + 72 + 12, 18 << 16)
+        self.binary.write_bytes(data)
+        with self.assertRaisesRegex(PackagingError, "requires iOS 18.0.0"):
+            validate_app(self.app, "interface")
 
     def test_misleading_artifact_name_rejected(self):
         with self.assertRaises(PackagingError):
