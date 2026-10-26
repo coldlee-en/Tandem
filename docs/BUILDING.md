@@ -42,7 +42,7 @@ checkout:
 | --- | --- |
 | folium-app/Folium | `64b4528e0e126ebc9f3b7538c52ffec2bf69c4e5` |
 | folium-app/Cytrus submodule | `81a12f0e425be4f5b3b4b67752e4abb211dcbe2d` |
-| folium-app/SharedDependencies | `2ee6621fcfe7cb4b938c1d0f1d842c6e2d72f97e` |
+| folium-app/SharedDependencies | `9787aa9062d8ff220f127052597e6f3ae1dcbc7a` |
 | jarrodnorwell/zstd | `9baae4431585740983318801beff0a7ae4494291` |
 
 Cytrus needs Vulkan, glslang, and Vulkan Memory Allocator headers, in addition to
@@ -65,6 +65,10 @@ network access to GitHub and those artifact hosts is required.
 When `--generate` is used, the generator also seeds the native workspace's
 `Package.resolved` with the reviewed upstream OpenSSL, PLzmaSDK, and zstd
 revisions from `Config/NativePackage.resolved`.
+
+The pinned SharedDependencies revision includes Boost headers and declares
+nihstro's dependency on them. Its DDS header uses the upstream `dds-ktx.h`
+filename; Tandem's Cytrus patch updates the two older includes accordingly.
 
 The generated `Cytrus` static target uses upstream build definitions and includes
 the core's Swift/C++ bridge. The app embeds/signs MoltenVK. The checked source

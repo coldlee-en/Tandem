@@ -70,15 +70,78 @@ jobs:
       - name: Test local library
         run: swift test --package-path Packages/EmulationKit
 
+      - name: Fingerprint native build toolchain
+        if: inputs.mode == 'native'
+        id: switch-toolchain
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import platform
+          import re
+          import subprocess
+
+          def output(*args):
+              return subprocess.check_output(args, text=True).strip()
+
+          versions = re.findall(r"^(8\.\d+\.\d+)[ \[]", output("dotnet", "--list-sdks"), re.MULTILINE)
+          sdk = max(versions, key=lambda value: tuple(map(int, value.split("."))))
+          toolchain = {
+              "xcode": output("xcodebuild", "-version"),
+              "iphoneos_sdk": output("xcrun", "--sdk", "iphoneos", "--show-sdk-version"),
+              "host_architecture": platform.machine(),
+              "dotnet_sdk": sdk,
+          }
+          fingerprint = hashlib.sha256(json.dumps(toolchain, sort_keys=True).encode()).hexdigest()
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output_file:
+              output_file.write("fingerprint=" + fingerprint + "\n")
+          PY
+
+      - name: Restore compiled Switch runtime
+        if: inputs.mode == 'native'
+        id: switch-cache
+        uses: actions/cache/restore@v4
+        with:
+          key: switch-ios-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.switch-toolchain.outputs.fingerprint }}-${{ hashFiles('scripts/build_switch.sh', 'scripts/patch_switch.py', 'scripts/package_ipa.py') }}
+          path: |
+            Frameworks/SwitchBuildManifest.json
+            Frameworks/Ryujinx.Headless.SDL2.dylib
+            Frameworks/libMoltenVK.dylib
+            Frameworks/libavcodec.dylib
+            Frameworks/libavutil.dylib
+            Frameworks/SDL2.xcframework
+            Frameworks/BreakpointJIT.framework
+            Frameworks/Hypervisor.framework
+            Frameworks/Notices/Switch
+
       - name: Build and package compiled iOS app
         shell: bash
         env:
           TANDEM_IPA_MODE: ${{ inputs.mode }}
+          TANDEM_SWITCH_CACHE: "1"
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/tandem-ipa"
           bash scripts/build_ipa.sh "--$TANDEM_IPA_MODE" --output "$RUNNER_TEMP/tandem-ipa" \
             2>&1 | tee "$RUNNER_TEMP/tandem-ipa/prepare-and-build.log"
+
+      - name: Save completed Switch runtime for later builds
+        if: always() && inputs.mode == 'native' && steps.switch-toolchain.outcome == 'success' && steps.switch-cache.outputs.cache-hit != 'true' && hashFiles('Frameworks/SwitchBuildManifest.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ steps.switch-cache.outputs.cache-primary-key }}
+          path: |
+            Frameworks/SwitchBuildManifest.json
+            Frameworks/Ryujinx.Headless.SDL2.dylib
+            Frameworks/libMoltenVK.dylib
+            Frameworks/libavcodec.dylib
+            Frameworks/libavutil.dylib
+            Frameworks/SDL2.xcframework
+            Frameworks/BreakpointJIT.framework
+            Frameworks/Hypervisor.framework
+            Frameworks/Notices/Switch
 
       - name: Upload successful IPA and manifest
         uses: actions/upload-artifact@v4

@@ -16,6 +16,8 @@ def specification(vulkan_include: Path | None, with_3ds: bool, with_switch: bool
             "targets": {"Tandem": {"dependencies": []}}}
     app = spec["targets"]["Tandem"]
     if with_3ds:
+        app.setdefault("settings", {}).setdefault("base", {})["SWIFT_ACTIVE_COMPILATION_CONDITIONS"] = [
+            "$(inherited)", "TANDEM_HAS_CYTRUS"]
         cytrus = ROOT / "Vendor/Folium/Cytrus"
         shared = ROOT / "Vendor/SharedDependencies"
         if not (cytrus / ".tandem-patched-v1").is_file() or not (shared / "Package.swift").is_file():

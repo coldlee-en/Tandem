@@ -6,6 +6,12 @@ import hashlib
 import json
 
 REPLACEMENTS = {
+    "System/core/frontend/image_interface.cpp": [
+        ("#include <dds_ktx.h>", "#include <dds-ktx.h>"),
+    ],
+    "System/include/core/frontend/image_interface.h": [
+        ("#include <dds_ktx.h>", "#include <dds-ktx.h>"),
+    ],
     "System/common/dynamic_library/dynamic_library.cpp": [
         ('#elif defined(__APPLE__)\n    auto prefix = name.starts_with("lib") ? "" : "lib";', '#elif defined(__APPLE__)\n    if (name == "avcodec" || name == "avdevice" || name == "avfilter" || name == "avformat" || name == "avutil" || name == "swresample" || name == "swscale") {\n        return fmt::format("@rpath/lib{}.framework/lib{}", name, name);\n    }\n    auto prefix = name.starts_with("lib") ? "" : "lib";'),
     ],
