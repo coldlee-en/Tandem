@@ -6,6 +6,59 @@ import hashlib
 import json
 
 REPLACEMENTS = {
+    # libc++ no longer guarantees type_traits through unrelated standard headers.
+    # Each of these headers directly names traits from that standard header.
+    "System/include/common/hash.h": [
+        ("#include <string>", "#include <string>\n#include <string_view>\n#include <type_traits>\n#include <utility>"),
+    ],
+    "System/include/common/common_funcs.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/common/threadsafe_queue.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/core/file_sys/archive_backend.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/core/hle/kernel/hle_ipc.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/core/hle/mii.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/core/hle/service/fs/archive.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/core/hle/service/ldr_ro/cro_helper.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/core/hle/service/nfc/nfc_types.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/video_core/pica/output_vertex.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/video_core/pica/regs_lcd.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/video_core/rasterizer_cache/framebuffer_base.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/video_core/rasterizer_cache/rasterizer_cache_base.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/video_core/rasterizer_cache/sampler_params.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/video_core/renderer_vulkan/vk_graphics_pipeline.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/video_core/renderer_vulkan/vk_shader_disk_cache.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
+    "System/include/video_core/shader/generator/pica_fs_config.h": [
+        ("#pragma once", "#pragma once\n\n#include <type_traits>"),
+    ],
     # Headers live in System/include; qualified paths avoid Xcode's flattened
     # header map and its collisions between unrelated internal basenames.
     "System/video_core/right_eye_disabler.cpp": [
