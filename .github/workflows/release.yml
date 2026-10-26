@@ -1,0 +1,82 @@
+name: Publish native release
+
+on:
+  workflow_run:
+    workflows: [Build unsigned IPA]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful native Build unsigned IPA run to publish
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: native-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Check out trusted release tooling
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Test release publication guards
+        run: python3 scripts/tests/test_publish_release.py
+      - name: Verify source build
+        id: build
+        env:
+          REQUESTED_RUN: ${{ inputs.run_id || github.event.workflow_run.id }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          run_id = os.environ['REQUESTED_RUN']
+          repo = os.environ['GH_REPO']
+          if not re.fullmatch(r'[0-9]+', run_id):
+              raise SystemExit('A numeric build run ID is required.')
+          def api(path):
+              return json.loads(subprocess.check_output(['gh', 'api', path], text=True))
+          run = api(f'repos/{repo}/actions/runs/{run_id}')
+          if not (run['conclusion'] == 'success'
+                  and run['path'] == '.github/workflows/build-ipa.yml'
+                  and run['head_branch'] == 'main'
+                  and run['head_repository']['full_name'] == repo
+                  and run['event'] in ('push', 'workflow_dispatch')):
+              raise SystemExit('Publish only successful native builds from this repository main branch.')
+          artifacts = api(f'repos/{repo}/actions/runs/{run_id}/artifacts?per_page=100')['artifacts']
+          native = [a for a in artifacts if a['name'] == 'Tandem-native-unsigned-IPA' and not a['expired']]
+          if len(native) > 1:
+              raise SystemExit('Ambiguous native artifact.')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write(f'run_id={run_id}\nsha={run["head_sha"]}\nnative={str(bool(native)).lower()}\n')
+          if not native:
+              print('No native IPA artifact: interface builds are not released.')
+          PY
+      - name: Download verified native build
+        if: steps.build.outputs.native == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: Tandem-native-unsigned-IPA
+          run-id: ${{ steps.build.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: release-artifact
+      - name: Validate and publish versioned prerelease
+        if: steps.build.outputs.native == 'true'
+        env:
+          BUILD_SOURCE_SHA: ${{ steps.build.outputs.sha }}
+          BUILD_RUN_ID: ${{ steps.build.outputs.run_id }}
+        run: >-
+          python3 scripts/publish_release.py --artifact-directory release-artifact
+          --source-sha "$BUILD_SOURCE_SHA" --run-id "$BUILD_RUN_ID"
+          --repository "$GH_REPO"

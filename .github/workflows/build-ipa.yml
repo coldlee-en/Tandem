@@ -1,6 +1,9 @@
 name: Build unsigned IPA
 
 on:
+  push:
+    branches: [main]
+    paths: [project.yml]
   workflow_dispatch:
     inputs:
       mode:
@@ -14,12 +17,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: ipa-${{ github.ref }}-${{ inputs.mode }}
+  group: ipa-${{ github.ref }}-${{ inputs.mode || 'native' }}
   cancel-in-progress: false
 
 jobs:
   archive:
-    name: ${{ inputs.mode }} · unsigned arm64 IPA
+    name: ${{ inputs.mode || 'native' }} · unsigned arm64 IPA
     runs-on: macos-15
     timeout-minutes: 120
     steps:
@@ -55,7 +58,7 @@ jobs:
           python-version: "3.12"
 
       - name: Set up .NET for native Switch core
-        if: inputs.mode == 'native'
+        if: inputs.mode != 'interface'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
@@ -71,7 +74,7 @@ jobs:
         run: swift test --package-path Packages/EmulationKit
 
       - name: Fingerprint native build toolchain
-        if: inputs.mode == 'native'
+        if: inputs.mode != 'interface'
         id: switch-toolchain
         shell: bash
         run: |
@@ -100,7 +103,7 @@ jobs:
           PY
 
       - name: Restore compiled Switch runtime
-        if: inputs.mode == 'native'
+        if: inputs.mode != 'interface'
         id: switch-cache
         uses: actions/cache/restore@v4
         with:
@@ -119,7 +122,7 @@ jobs:
       - name: Build and package compiled iOS app
         shell: bash
         env:
-          TANDEM_IPA_MODE: ${{ inputs.mode }}
+          TANDEM_IPA_MODE: ${{ inputs.mode || 'native' }}
           TANDEM_SWITCH_CACHE: "1"
         run: |
           set -euo pipefail
@@ -128,7 +131,7 @@ jobs:
             2>&1 | tee "$RUNNER_TEMP/tandem-ipa/prepare-and-build.log"
 
       - name: Save completed Switch runtime for later builds
-        if: always() && inputs.mode == 'native' && steps.switch-toolchain.outcome == 'success' && steps.switch-cache.outputs.cache-hit != 'true' && hashFiles('Frameworks/SwitchBuildManifest.json') != ''
+        if: always() && inputs.mode != 'interface' && steps.switch-toolchain.outcome == 'success' && steps.switch-cache.outputs.cache-hit != 'true' && hashFiles('Frameworks/SwitchBuildManifest.json') != ''
         uses: actions/cache/save@v4
         with:
           key: ${{ steps.switch-cache.outputs.cache-primary-key }}
@@ -146,7 +149,7 @@ jobs:
       - name: Upload successful IPA and manifest
         uses: actions/upload-artifact@v4
         with:
-          name: Tandem-${{ inputs.mode }}-unsigned-IPA
+          name: Tandem-${{ inputs.mode || 'native' }}-unsigned-IPA
           path: |
             ${{ runner.temp }}/tandem-ipa/*.ipa
             ${{ runner.temp }}/tandem-ipa/*.json
@@ -158,7 +161,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Tandem-${{ inputs.mode }}-build-logs
+          name: Tandem-${{ inputs.mode || 'native' }}-build-logs
           path: |
             ${{ runner.temp }}/tandem-ipa/**/*.log
             ${{ runner.temp }}/tandem-ipa/**/*.xcresult
