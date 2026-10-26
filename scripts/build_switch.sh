@@ -35,7 +35,7 @@ TANDEM_DEPENDENCIES_DIR="$TANDEM_MELONX_SOURCE/src/MeloNX/MeloNX/Dependencies"
 for library in libMoltenVK.dylib libavcodec.dylib libavutil.dylib; do
     artifact="$TANDEM_DEPENDENCIES_DIR/Dynamic Libraries/$library"
     [[ -f "$artifact" ]] || fail "Missing upstream native dependency: $library"
-    xcrun lipo -verify_arch arm64 "$artifact" || fail "$library is not an arm64 Mach-O library. Check Git LFS download access."
+    xcrun lipo "$artifact" -verify_arch arm64 || fail "$library is not an arm64 Mach-O library. Check Git LFS download access."
 done
 
 # These exports and data-path changes are required by Tandem's native adapter.
@@ -56,7 +56,7 @@ if [[ ! -f "$TANDEM_CORE_BINARY" ]]; then
     TANDEM_CORE_BINARY="$TANDEM_NATIVE_OUTPUT/native/Ryujinx.Headless.SDL2.dylib"
 fi
 [[ -f "$TANDEM_CORE_BINARY" ]] || fail "NativeAOT completed without the expected Ryujinx.Headless.SDL2.dylib artifact."
-xcrun lipo -verify_arch arm64 "$TANDEM_CORE_BINARY" || fail "The compiled core is not an arm64 Mach-O library."
+xcrun lipo "$TANDEM_CORE_BINARY" -verify_arch arm64 || fail "The compiled core is not an arm64 Mach-O library."
 
 mkdir -p -- "$TANDEM_FRAMEWORKS_DIR"
 ditto "$TANDEM_CORE_BINARY" "$TANDEM_FRAMEWORKS_DIR/Ryujinx.Headless.SDL2.dylib"
@@ -73,7 +73,7 @@ done
 for framework in BreakpointJIT Hypervisor; do
     source_framework="$TANDEM_DEPENDENCIES_DIR/Dynamic Libraries/$framework.framework"
     if [[ -d "$source_framework" ]]; then
-        xcrun lipo -verify_arch arm64 "$source_framework/$framework" || fail "$framework has no arm64 binary."
+        xcrun lipo "$source_framework/$framework" -verify_arch arm64 || fail "$framework has no arm64 binary."
         ditto "$source_framework" "$TANDEM_FRAMEWORKS_DIR/$framework.framework"
     fi
 done

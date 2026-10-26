@@ -71,9 +71,11 @@ jobs:
         run: swift test --package-path Packages/EmulationKit
 
       - name: Build and package compiled iOS app
+        shell: bash
         env:
           TANDEM_IPA_MODE: ${{ inputs.mode }}
         run: |
+          set -euo pipefail
           mkdir -p "$RUNNER_TEMP/tandem-ipa"
           bash scripts/build_ipa.sh "--$TANDEM_IPA_MODE" --output "$RUNNER_TEMP/tandem-ipa" \
             2>&1 | tee "$RUNNER_TEMP/tandem-ipa/prepare-and-build.log"
