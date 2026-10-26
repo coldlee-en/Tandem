@@ -90,6 +90,8 @@ def specification(vulkan_include: Path | None, with_3ds: bool, with_switch: bool
             {"sdk": "CoreVideo.framework"}, {"sdk": "libresolv.tbd"},
             {"sdk": "libz.tbd"}, {"sdk": "libbz2.tbd"}]
     if with_switch:
+        app.setdefault("settings", {}).setdefault("base", {})["LIBRARY_SEARCH_PATHS"] = [
+            "$(inherited)", "$(SRCROOT)/Frameworks"]
         for name in ["Ryujinx.Headless.SDL2.dylib", "libMoltenVK.dylib", "libavcodec.dylib", "libavutil.dylib", "SDL2.xcframework"]:
             if not (ROOT / "Frameworks" / name).exists():
                 raise ValueError(f"Missing Frameworks/{name}; run scripts/build_switch.sh on a Mac first.")
