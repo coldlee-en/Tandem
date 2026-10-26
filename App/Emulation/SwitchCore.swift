@@ -103,7 +103,7 @@ private final class SwitchNativeLibrary: @unchecked Sendable {
         button = try symbol("set_gamepad_button_state", from: handle, as: Button.self)
         stick = try symbol("set_gamepad_stick_axis", from: handle, as: Stick.self)
         pause = try symbol("pause_emulation", from: handle, as: Pause.self)
-        stop = try symbol("stop_emulation", from: handle, as: Initialize.self)
+        stop = try symbol("tandem_request_stop", from: handle, as: Initialize.self)
         register = try symbol("TandemRegisterEventCallback", from: helper, as: Register.self)
         viewSize = try symbol("set_view_size", from: handle, as: ViewSize.self)
         touchBegan = try symbol("touch_began", from: handle, as: Touch.self)
@@ -326,7 +326,8 @@ final class SwitchCore: EmulatorCore, CoreExitReporting {
         launch = nil
         continuation?.resume(throwing: error)
         guard stopTask == nil else { return }
-        // Upstream stop is a no-op until its window exists. Retry during startup.
+        // The patched export snapshots the current native window and queues its
+        // stop off the UI thread. Retry until startup has published that window.
         stopTask = Task { [weak self] in
             while let self, worker != nil {
                 library?.stop()
