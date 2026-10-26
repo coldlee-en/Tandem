@@ -94,7 +94,8 @@ def publish(tag, assets, notes, repository, source_sha):
                 raise ValueError('Existing tag points to another commit; no release was created.')
         elif 'HTTP 404' not in ref.stderr:
             raise RuntimeError(ref.stderr.strip())
-        command(['gh', 'release', 'create', tag, '--repo', repository, '--target', source_sha,
+        command(['gh', 'release', 'create', tag, '--repo', repository,
+                 *([] if ref.returncode == 0 else ['--target', source_sha]),
                  '--title', f'Tandem {tag[1:]} — unsigned native iOS build', '--draft', '--prerelease',
                  '--notes-file', str(notes)])
     command(['gh', 'release', 'upload', tag, *map(str, assets), '--repo', repository, '--clobber'])
