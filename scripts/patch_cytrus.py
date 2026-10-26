@@ -16,6 +16,8 @@ REPLACEMENTS = {
         ('#elif defined(__APPLE__)\n    auto prefix = name.starts_with("lib") ? "" : "lib";', '#elif defined(__APPLE__)\n    if (name == "avcodec" || name == "avdevice" || name == "avfilter" || name == "avformat" || name == "avutil" || name == "swresample" || name == "swscale") {\n        return fmt::format("@rpath/lib{}.framework/lib{}", name, name);\n    }\n    auto prefix = name.starts_with("lib") ? "" : "lib";'),
     ],
     "Cytrus.swift": [
+        ("cytrus.is_running()", "cytrus.is_running(false, false)"),
+        ("cytrus.is_paused()", "cytrus.is_paused(false, false)"),
         ("public func initializeLogging() {\n        cytrus.initialize_logging()", 
          "public func initializeLogging(userDirectory: URL) {\n        cytrus.initialize_logging(std.string(userDirectory.path + \"/\"))"),
         ("public func insertDisc(at url: URL) {\n        cytrus.insert_disc(std.string(url.path))", 

@@ -79,6 +79,10 @@ if [[ -z "$TANDEM_REVISION" ]]; then
     fi
 fi
 TANDEM_XCODE_VERSION="$(xcodebuild -version)"
+if [[ "$TANDEM_MODE" == native ]]; then
+    python3 "$SCRIPT_DIR/verify_native_exports.py" \
+        --app "$TANDEM_ARCHIVE/Products/Applications/Tandem.app"
+fi
 python3 "$SCRIPT_DIR/package_ipa.py" \
     --app "$TANDEM_ARCHIVE/Products/Applications/Tandem.app" \
     --output "$TANDEM_IPA" \
