@@ -46,7 +46,12 @@ def specification(vulkan_include: Path | None, with_3ds: bool, with_switch: bool
             "zstd": {"url": "https://github.com/jarrodnorwell/zstd", "revision": "9baae4431585740983318801beff0a7ae4494291"}}
         spec["targets"]["Cytrus"] = {
             "type": "library.static", "platform": "iOS",
-            "sources": [{"path": "Vendor/Folium/Cytrus", "excludes": ["README.md", "LICENSE", ".tandem-patched-v1"]}],
+            # These headers are implementation files, resolved through search
+            # paths. Exporting them flattens distinct names such as core/memory.h
+            # and audio_core/memory.h into the same archive include directory.
+            "sources": [{"path": "Vendor/Folium/Cytrus", "excludes": [
+                "README.md", "LICENSE", ".tandem-patched-v1",
+                "**/*.h", "**/*.hpp", "**/*.hh", "**/*.hxx", "**/*.inl", "**/*.inc"]}],
             "settings": {"base": {
                 "SWIFT_VERSION": "6.0", "SWIFT_DEFAULT_ACTOR_ISOLATION": "nonisolated",
                 "DEFINES_MODULE": "YES",
