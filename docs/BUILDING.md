@@ -63,8 +63,13 @@ XCFrameworks, and SharedDependencies/zstd
 Swift packages. SwiftPM restores additional upstream packages/artifacts, so
 network access to GitHub and those artifact hosts is required.
 When `--generate` is used, the generator also seeds the native workspace's
-`Package.resolved` with the reviewed upstream OpenSSL, PLzmaSDK, and zstd
+`Package.resolved` with the reviewed upstream OpenSSL and PLzmaSDK
 revisions from `Config/NativePackage.resolved`.
+
+The zstd package is checked out at its listed pin into `Vendor/Zstd` and used as
+a local Swift package. Cytrus also receives explicit `lib` and `contrib` header
+search paths, so its C++ files can include `zstd.h` and
+`seekable_format/zstd_seekable.h` during archive builds.
 
 The pinned SharedDependencies revision includes Boost headers and declares
 nihstro's dependency on them. Its DDS header uses the upstream `dds-ktx.h`

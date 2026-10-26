@@ -20,8 +20,12 @@ def specification(vulkan_include: Path | None, with_3ds: bool, with_switch: bool
             "$(inherited)", "TANDEM_HAS_CYTRUS"]
         cytrus = ROOT / "Vendor/Folium/Cytrus"
         shared = ROOT / "Vendor/SharedDependencies"
+        zstd = ROOT / "Vendor/Zstd"
         if not (cytrus / ".tandem-patched-v1").is_file() or not (shared / "Package.swift").is_file():
             raise ValueError("Run scripts/prepare_3ds.sh first.")
+        for relative in ["Package.swift", "lib/zstd.h", "contrib/seekable_format/zstd_seekable.h"]:
+            if not (zstd / relative).is_file():
+                raise ValueError(f"Missing pinned zstd source/header: {zstd / relative}. Run scripts/prepare_3ds.sh first.")
         vulkan_include = vulkan_include or ROOT / "Vendor/GraphicsHeaders/include"
         if not (vulkan_include / "vulkan/vulkan.hpp").is_file():
             raise ValueError("Run scripts/prepare_3ds.sh to prepare graphics headers, or set TANDEM_VULKAN_INCLUDE to a Vulkan SDK include directory.")
@@ -42,10 +46,11 @@ def specification(vulkan_include: Path | None, with_3ds: bool, with_switch: bool
             if not (ROOT / relative / "Info.plist").is_file():
                 raise ValueError(f"Missing bundled native dependency: {relative}. Run scripts/prepare_3ds.sh first.")
         includes = [str(path.relative_to(ROOT)) for path in sorted((shared / "Sources").glob("*/include"))]
+        includes += ["$(SRCROOT)/Vendor/Zstd/lib", "$(SRCROOT)/Vendor/Zstd/contrib"]
         includes += [str(vulkan_include), str(vulkan_include / "vma"), str(vulkan_include / "glslang")]
         spec["packages"] = {
             "SharedDependencies": {"path": "Vendor/SharedDependencies"},
-            "zstd": {"url": "https://github.com/jarrodnorwell/zstd", "revision": "9baae4431585740983318801beff0a7ae4494291"}}
+            "zstd": {"path": "Vendor/Zstd"}}
         spec["targets"]["Cytrus"] = {
             "type": "library.static", "platform": "iOS",
             # These headers are implementation files, resolved through search

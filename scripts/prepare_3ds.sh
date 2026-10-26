@@ -25,6 +25,7 @@ git -C "$TANDEM_VENDOR/Folium" submodule update --init Cytrus
     printf 'error: Cytrus revision differs from pin\n' >&2; exit 1;
 }
 fetch_pin SharedDependencies https://github.com/folium-app/SharedDependencies.git 9787aa9062d8ff220f127052597e6f3ae1dcbc7a
+fetch_pin Zstd https://github.com/jarrodnorwell/zstd.git 9baae4431585740983318801beff0a7ae4494291
 python3 "$TANDEM_ROOT/scripts/patch_cytrus.py" "$TANDEM_VENDOR/Folium/Cytrus"
 if [[ -z "${TANDEM_VULKAN_INCLUDE:-}" ]]; then
     python3 "$TANDEM_ROOT/scripts/prepare_graphics_headers.py"
