@@ -18,7 +18,7 @@ class ReleaseTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix='tandem-release-test-')
         self.directory = Path(self.temp.name)
         self.source = 'a' * 40
-        self.ipa = self.directory / 'Tandem-native-unsigned.ipa'
+        self.ipa = self.directory / 'tandemv0.1.1.ipa'
         info = {'CFBundleShortVersionString': '0.1.1', 'CFBundleVersion': '2',
                 'CFBundleIdentifier': 'app.tandem.emulator'}
         with zipfile.ZipFile(self.ipa, 'w') as archive:
@@ -36,7 +36,7 @@ class ReleaseTests(unittest.TestCase):
         self.temp.cleanup()
 
     def save(self):
-        (self.directory / 'Tandem-native-unsigned.manifest.json').write_text(json.dumps(self.data))
+        (self.directory / 'tandemv0.1.1.manifest.json').write_text(json.dumps(self.data))
 
     def prepare(self):
         return publisher.prepare(self.directory, self.source, '1234', 'owner/Tandem')

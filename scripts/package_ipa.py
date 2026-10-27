@@ -206,12 +206,21 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def artifact_name(version: str, mode: str) -> str:
+    if not isinstance(version, str) or not re.fullmatch(r"[0-9]+(?:\.[0-9]+){1,2}", version):
+        raise PackagingError("The app must have a numeric version to name its IPA.")
+    if mode not in ("native", "interface"):
+        raise PackagingError("Build mode must be native or interface.")
+    return f"tandemv{version}{'-interface' if mode == 'interface' else ''}.ipa"
+
+
 def package(app: Path, output: Path, mode: str, source_revision: str,
             *, archive_path: str | None = None, xcode_version: str | None = None) -> dict:
-    expected = f"Tandem-{mode}-unsigned.ipa"
+    app, info, entries = validate_app(app, mode)
+    version = info.get("CFBundleShortVersionString")
+    expected = artifact_name(version, mode)
     if output.name != expected:
         raise PackagingError(f"Use the explicit artifact name {expected} for this build mode.")
-    app, info, entries = validate_app(app, mode)
     output = output.resolve(strict=False)
     try:
         output.relative_to(app)
@@ -286,6 +295,13 @@ class PackagingTests(unittest.TestCase):
         self.binary.write_bytes(self.fixture())
         self.binary.chmod(0o755)
 
+    def test_versioned_ipa_names_identify_mode(self):
+        self.assertEqual(artifact_name("0.1.3", "native"), "tandemv0.1.3.ipa")
+        self.assertEqual(artifact_name("0.1.3", "interface"), "tandemv0.1.3-interface.ipa")
+        for version in ("../1.2", "1.2/3", "", "v1.2"):
+            with self.assertRaises(PackagingError):
+                artifact_name(version, "native")
+
     def tearDown(self):
         self.temporary.cleanup()
 
@@ -303,7 +319,7 @@ class PackagingTests(unittest.TestCase):
         return header + text + version + entry + b"\xc0\x03\x5f\xd6"
 
     def test_valid_bundle_packages_payload_and_manifest(self):
-        output = self.root / "Tandem-interface-unsigned.ipa"
+        output = self.root / "tandemv0.1-interface.ipa"
         manifest = package(self.app, output, "interface", "test-source")
         with zipfile.ZipFile(output) as archive:
             self.assertIn("Payload/Tandem.app/Tandem", archive.namelist())
@@ -349,7 +365,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_contained_symlink_preserved(self):
         (self.app / "alias").symlink_to("Tandem")
-        output = self.root / "Tandem-interface-unsigned.ipa"
+        output = self.root / "tandemv0.1-interface.ipa"
         package(self.app, output, "interface", "test-source")
         with zipfile.ZipFile(output) as archive:
             item = archive.getinfo("Payload/Tandem.app/alias")
@@ -385,7 +401,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_misleading_artifact_name_rejected(self):
         with self.assertRaises(PackagingError):
-            package(self.app, self.root / "Tandem-native-unsigned.ipa", "interface", "test-source")
+            package(self.app, self.root / "tandemv0.1.ipa", "interface", "test-source")
 
     def test_invalid_segment_bounds_rejected(self):
         data = bytearray(self.fixture())

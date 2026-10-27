@@ -11,3 +11,5 @@ Development IPAs are unsigned prereleases. Preserve the signing/JIT requirements
 and actual device-validation status in release notes. Never replace a published
 version with different source or binaries; bump the version instead. If GitHub
 blocks publication, report the concrete error and available build download.
+
+Name future native IPA files `tandemv<marketing-version>.ipa`, for example `tandemv0.1.3.ipa`. Keep interface-only builds visibly distinct.

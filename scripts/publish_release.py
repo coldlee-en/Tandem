@@ -24,9 +24,18 @@ def prepare(directory, source_sha, run_id, repository):
         raise ValueError('Invalid build identity.')
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository):
         raise ValueError('Invalid repository.')
-    ipa = directory / 'Tandem-native-unsigned.ipa'
-    manifest = directory / 'Tandem-native-unsigned.manifest.json'
+    manifests = list(directory.glob('*.manifest.json'))
+    if len(manifests) != 1:
+        raise ValueError('Expected exactly one native build manifest.')
+    manifest = manifests[0]
     data = json.loads(manifest.read_text())
+    name = data.get('artifact', '')
+    version = data.get('version', '')
+    if not isinstance(version, str) or not re.fullmatch(r'(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)?', version):
+        raise ValueError('A semantic version is required for the release tag.')
+    if name not in (f'tandemv{version}.ipa', 'Tandem-native-unsigned.ipa') or manifest.name != Path(name).with_suffix('.manifest.json').name:
+        raise ValueError('IPA filename does not match the native build version.')
+    ipa = directory / name
     required = {'artifact': ipa.name, 'source_revision': source_sha, 'build_mode': 'native',
                 'contains_emulator_cores': True, 'signing': 'unsigned',
                 'platform': 'iOS', 'architecture': 'arm64', 'requires_resigning': True}
@@ -45,7 +54,7 @@ def prepare(directory, source_sha, run_id, repository):
             or str(info.get('CFBundleVersion')) != str(data.get('build'))
             or info.get('CFBundleIdentifier') != data.get('bundle_identifier')):
         raise ValueError('IPA bundle metadata differs from its manifest.')
-    checksum = directory / 'Tandem-native-unsigned.sha256'
+    checksum = ipa.with_suffix('.sha256')
     checksum.write_text(f'{data["sha256"]}  {ipa.name}\n')
     notes = directory / 'release-notes.md'
     notes.write_text(f'''Native iOS development build of Tandem {version}, including the Cytrus/Azahar 3DS and MeloNX/Ryujinx Switch integrations.

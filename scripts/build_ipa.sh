@@ -54,7 +54,7 @@ mkdir -p -- "$TANDEM_OUTPUT"
 TANDEM_OUTPUT="$(cd -- "$TANDEM_OUTPUT" && pwd)"
 TANDEM_BUILD_DIR="$(mktemp -d "$TANDEM_OUTPUT/build-$TANDEM_MODE-XXXXXX")"
 TANDEM_ARCHIVE="$TANDEM_BUILD_DIR/Tandem.xcarchive"
-TANDEM_IPA="$TANDEM_OUTPUT/Tandem-$TANDEM_MODE-unsigned.ipa"
+
 
 # Preserve the build log and real archive for inspection. A failed compiler or
 # linker exits through pipefail and can never fall through to IPA packaging.
@@ -69,6 +69,19 @@ xcodebuild \
     CODE_SIGNING_REQUIRED=NO \
     CODE_SIGN_IDENTITY= \
     archive 2>&1 | tee "$TANDEM_BUILD_DIR/xcodebuild.log"
+
+TANDEM_VERSION="$(python3 - "$TANDEM_ARCHIVE/Products/Applications/Tandem.app/Info.plist" <<'PYVERSION'
+import plistlib, re, sys
+with open(sys.argv[1], 'rb') as file:
+    version = plistlib.load(file).get('CFBundleShortVersionString')
+if not isinstance(version, str) or not re.fullmatch(r'[0-9]+(?:\.[0-9]+){1,2}', version):
+    raise SystemExit('The archived app has no valid numeric version.')
+print(version)
+PYVERSION
+)"
+TANDEM_SUFFIX=""
+if [[ "$TANDEM_MODE" == interface ]]; then TANDEM_SUFFIX="-interface"; fi
+TANDEM_IPA="$TANDEM_OUTPUT/tandemv$TANDEM_VERSION$TANDEM_SUFFIX.ipa"
 
 TANDEM_REVISION="${GITHUB_SHA:-}"
 if [[ -z "$TANDEM_REVISION" ]]; then

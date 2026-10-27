@@ -52,8 +52,8 @@ core build, or validation step stops the script before producing a new IPA.
 
 Outputs:
 
-- `dist/ipa/Tandem-native-unsigned.ipa`
-- `dist/ipa/Tandem-native-unsigned.manifest.json`
+- `dist/ipa/tandemv<version>.ipa`
+- `dist/ipa/tandemv<version>.manifest.json`
 - A `dist/ipa/build-native-*` directory containing the actual Xcode archive,
   DerivedData, and `xcodebuild.log`.
 
@@ -94,7 +94,7 @@ This explicit option compiles the native iOS interface without emulator cores:
 bash scripts/build_ipa.sh --interface --output dist/ipa
 ```
 
-It produces `Tandem-interface-unsigned.ipa` and the corresponding manifest.
+It produces `tandemv<version>-interface.ipa` and the corresponding manifest.
 This artifact supports interface testing and cannot run games. Its filename
 and manifest identify it separately from the native emulator integration.
 
