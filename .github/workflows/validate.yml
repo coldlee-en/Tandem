@@ -64,6 +64,7 @@ jobs:
           -destination-timeout 120
           -parallel-testing-enabled NO
           -only-testing:TandemTests/SessionTests
+          -only-testing:TandemTests/SystemFileStoreTests
           -resultBundlePath "${{ runner.temp }}/Tandem-lifecycle-tests.xcresult"
           CODE_SIGNING_ALLOWED=NO test-without-building
       - name: Upload lifecycle test results

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 import EmulationKit
 
@@ -10,6 +11,8 @@ struct LibraryView: View {
     @State private var selectedSystem: GameSystem?
     @State private var importing = false
     @State private var showingSettings = false
+    @State private var coverTarget: GameRecord?
+    @State private var importingCover = false
 
     init(model: AppModel) {
         self.model = model
@@ -40,9 +43,11 @@ struct LibraryView: View {
                     else {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 155, maximum: 240), spacing: 16)], spacing: 20) {
                             ForEach(filteredGames) { game in
-                                GameCard(game: game) { model.launch(game) }
+                                GameCard(game: game, coverURL: model.coverURL(for: game), coverVersion: model.coverVersions[game.id, default: 0]) { model.launch(game) }
                                     .contextMenu {
                                         Button("Play", systemImage: "play.fill") { model.launch(game) }
+                                        Button("Choose Cover Image", systemImage: "photo") { coverTarget = game; importingCover = true }
+                                        Button("Remove Cover Image", systemImage: "photo.badge.minus") { model.removeCover(for: game) }
                                         Button("Remove from Library", systemImage: "trash", role: .destructive) { model.remove(game) }
                                     }
                             }
@@ -66,6 +71,13 @@ struct LibraryView: View {
         .fileImporter(isPresented: $importing, allowedContentTypes: [.data], allowsMultipleSelection: true) { result in
             switch result {
             case .success(let urls): model.importGames(urls)
+            case .failure(let error): model.errorMessage = error.localizedDescription
+            }
+        }
+        .fileImporter(isPresented: $importingCover, allowedContentTypes: [.image], allowsMultipleSelection: false) { result in
+            defer { coverTarget = nil }
+            switch result {
+            case .success(let urls): if let url = urls.first, let game = coverTarget { model.importCover(url, for: game) }
             case .failure(let error): model.errorMessage = error.localizedDescription
             }
         }
@@ -120,16 +132,26 @@ struct LibraryView: View {
 
 private struct GameCard: View {
     let game: GameRecord
+    let coverURL: URL
+    let coverVersion: Int
     let play: () -> Void
+    @State private var cover: UIImage?
     var body: some View {
         Button(action: play) {
             VStack(alignment: .leading, spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 18).fill(TandemTheme.surface)
-                    VStack(spacing: 20) {
-                        SystemMark(is3DS: game.system == .nintendo3DS)
-                        Text(game.title.prefix(2).uppercased())
-                            .font(.system(size: 42, weight: .light, design: .rounded)).foregroundStyle(.white.opacity(0.7))
+                    if let cover {
+                        GeometryReader { proxy in
+                            Image(uiImage: cover).resizable().scaledToFill()
+                                .frame(width: proxy.size.width, height: proxy.size.height).clipped()
+                        }.clipShape(RoundedRectangle(cornerRadius: 18))
+                    } else {
+                        VStack(spacing: 20) {
+                            SystemMark(is3DS: game.system == .nintendo3DS)
+                            Text(game.title.prefix(2).uppercased())
+                                .font(.system(size: 42, weight: .light, design: .rounded)).foregroundStyle(.white.opacity(0.7))
+                        }
                     }
                     VStack {
                         HStack {
@@ -147,5 +169,6 @@ private struct GameCard: View {
                     .font(.caption).foregroundStyle(TandemTheme.muted)
             }
         }.buttonStyle(.plain).accessibilityLabel("Play \(game.title), \(game.system.displayName)")
+            .task(id: coverVersion) { cover = UIImage(contentsOfFile: coverURL.path) }
     }
 }

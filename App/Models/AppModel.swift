@@ -30,6 +30,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var isImporting = false
     @Published private(set) var isManagingSystemData = false
     @Published var systemDataMessage: String?
+    @Published private(set) var coverVersions: [UUID: Int] = [:]
     let session: EmulationSession
     let systemDirectory: URL
     private let store: LibraryStore?
@@ -73,9 +74,35 @@ final class AppModel: ObservableObject {
     func remove(_ game: GameRecord) {
         guard session.game?.id != game.id, let store else { return }
         Task {
-            do { games = try await store.remove(game) }
+            do {
+                games = try await store.remove(game)
+                try? FileManager.default.removeItem(at: coverURL(for: game))
+                coverVersions[game.id] = nil
+            }
             catch { errorMessage = error.localizedDescription }
         }
+    }
+
+    func coverURL(for game: GameRecord) -> URL {
+        systemDirectory.deletingLastPathComponent().appendingPathComponent("Artwork", isDirectory: true)
+            .appendingPathComponent(game.id.uuidString + ".jpg")
+    }
+
+    func importCover(_ url: URL, for game: GameRecord) {
+        Task {
+            do {
+                try await systemFiles.importCover(from: url, gameID: game.id, systemDirectory: systemDirectory)
+                coverVersions[game.id, default: 0] += 1
+            } catch { errorMessage = error.localizedDescription }
+        }
+    }
+
+    func removeCover(for game: GameRecord) {
+        do {
+            let url = coverURL(for: game)
+            if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
+            coverVersions[game.id, default: 0] += 1
+        } catch { errorMessage = error.localizedDescription }
     }
 
     func launch(_ game: GameRecord) {
@@ -83,6 +110,10 @@ final class AppModel: ObservableObject {
         Task {
             do {
                 let fileURL = try await store.fileURL(for: game)
+                guard !isManagingSystemData else { return }
+                if game.system == .nintendo3DS {
+                    try await systemFiles.migrateThreeDSData(systemDirectory: systemDirectory)
+                }
                 guard !isManagingSystemData else { return }
                 try session.prepare(game, fileURL: fileURL)
             }

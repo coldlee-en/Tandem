@@ -12,7 +12,7 @@ and uncached reads. Encrypted extended headers and ExeFS sections are verified
 before use. System fixed-key NCCH is explicitly unsupported.
 
 No console keys are included or downloaded. Settings imports console-supplied
-Citra-style AES text into `Tandem/System/3DS/sysdata/keys.txt` with an `:AES`
+Citra-style AES text into `Tandem/System/3DS/system_data/keys.txt` with an `:AES`
 section. Required entries are `generatorConstant` and `slot0x2CKeyX`; later
 crypto methods can require `slot0x25KeyX`, `slot0x18KeyX`, or `slot0x1BKeyX`.
 Seeded games also require a console-supplied `seeddb.bin`. Key values are never

@@ -1,6 +1,6 @@
 # Encrypted 3DS cartridges
 
-Tandem 0.1.1 adds encrypted NCSD/NCCH loading for supported `.3ds`, `.cci`, and
+Tandem 0.1.1 added encrypted NCSD/NCCH loading for supported `.3ds`, `.cci`, and
 `.cxi` files. Decrypted games remain supported. Import your own console's keys
 locally in Settings; Tandem does not include or download console keys.
 
@@ -24,7 +24,9 @@ additionally require `slot0x25KeyX`, `slot0x18KeyX`, or `slot0x1BKeyX`. Every va
 must contain exactly 32 hexadecimal characters. These are 3DS AES entries;
 the separate Switch keys importer does not configure 3DS decryption.
 
-The importer normalizes entries into `Tandem/System/3DS/sysdata/keys.txt`, using
+Version 0.1.2 fixes the import location and automatically copies earlier keys and seeds when needed, without replacing files already in the correct directory.
+
+The importer normalizes entries into `Tandem/System/3DS/system_data/keys.txt`, using
 the core's `:AES` section format, and stores seeds alongside it as `seeddb.bin`.
 It imports only NCCH AES entries. Key values stay on the device and are omitted
 from import errors and AES parsing logs. Keep existing console data backed up

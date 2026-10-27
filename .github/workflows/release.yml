@@ -71,6 +71,26 @@ jobs:
           run-id: ${{ steps.build.outputs.run_id }}
           github-token: ${{ github.token }}
           path: release-artifact
+      - name: Verify simulator checks passed for the build source
+        if: steps.build.outputs.native == 'true'
+        env:
+          BUILD_SOURCE_SHA: ${{ steps.build.outputs.sha }}
+        run: |
+          python3 - <<'PYTEST'
+          import json, os, subprocess, time
+          repo, sha = os.environ['GH_REPO'], os.environ['BUILD_SOURCE_SHA']
+          for _ in range(20):
+              runs = json.loads(subprocess.check_output(['gh', 'api', f'repos/{repo}/actions/runs?head_sha={sha}&per_page=100'], text=True))['workflow_runs']
+              checks = [r for r in runs if r['path'] == '.github/workflows/validate.yml' and r['head_repository']['full_name'] == repo]
+              if any(r['conclusion'] == 'success' for r in checks):
+                  print('Simulator validation passed for the native build source.')
+                  break
+              if checks and all(r['status'] == 'completed' for r in checks):
+                  raise SystemExit('Simulator validation did not pass for this source.')
+              time.sleep(15)
+          else:
+              raise SystemExit('Simulator validation did not finish within five minutes.')
+          PYTEST
       - name: Validate and publish versioned prerelease
         if: steps.build.outputs.native == 'true'
         env:
