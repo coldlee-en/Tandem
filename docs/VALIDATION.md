@@ -5,14 +5,14 @@ Current evidence as of 2026-10-26:
 | macOS CI check | Result |
 | --- | --- |
 | EmulationKit library tests | **23 passed** |
-| iOS interface compilation and simulator session tests | Passed in [Validate](https://github.com/coldlee-en/Tandem/actions/runs/40418548684); all **4 session-lifecycle tests executed, 0 failures**, plus 23 library and key import tests |
+| iOS interface compilation and simulator session tests | Passed in [Validate](https://github.com/coldlee-en/Tandem/actions/runs/40426689926); all **4 session-lifecycle tests executed, 0 failures**, plus 23 library and key import tests |
 | Switch NativeAOT runtime | Compiled for iOS arm64; cached artifact verified |
 | Cytrus static archive | `libCytrus.a` compiled in [native build](https://github.com/coldlee-en/Tandem/actions/runs/40405335353) |
-| Final native app archive and IPA | [Build 40418548887 passed](https://github.com/coldlee-en/Tandem/actions/runs/40418548887) at source `8d34fae`; [unsigned native artifact](https://github.com/coldlee-en/Tandem/actions/runs/40418548887/artifacts/12696757979) downloaded and checksum verified |
+| Final native app archive and IPA | [Build 40426689978 passed](https://github.com/coldlee-en/Tandem/actions/runs/40426689978) at source `a9c4b69`; [unsigned native artifact](https://github.com/coldlee-en/Tandem/actions/runs/40426689978/artifacts/12700258473) downloaded and checksum verified |
 | Packaged Mach-O inspection | All 21 images have deployment minimums at or below iOS 17; bundled dependency-closure check passed |
 
 Native IPA SHA-256:
-`ca44acd38c767e841f8d80e4bf6fa4787276b1d2930883bd75f5ce460e257f0f`.
+`2cc1638694fdfcca6a01b355aa04732aa28bbf6ed5bab9fe311d0fdb2c442c85`.
 
 Additional checks performed in the Linux workspace:
 
@@ -64,3 +64,7 @@ The downloaded IPA is version 0.1.1, build 2; its ZIP CRC, manifest checksum,
 new Settings labels, and all 21 embedded device binaries were verified. No
 console keys or game content were used in these tests. Ocarina of Time 3D
 gameplay with a real console dump remains unverified.
+
+## Version 0.1.2
+
+Native archive and release passed at source `a9c4b69`. Twenty-three library tests and seven simulator tests passed, including key import paths, old-data migration, and cover image validation. The IPA checksum and app icon metadata were verified. Physical-device gameplay remains unverified.

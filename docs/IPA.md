@@ -7,18 +7,18 @@ unavailable.
 
 ## Available development artifact
 
-[Native build 40418548887 succeeded](https://github.com/coldlee-en/Tandem/actions/runs/40418548887)
-at source `8d34fae`. Download the
-[unsigned native IPA artifact](https://github.com/coldlee-en/Tandem/actions/runs/40418548887/artifacts/12696757979)
+[Native build 40426689978 succeeded](https://github.com/coldlee-en/Tandem/actions/runs/40426689978)
+at source `a9c4b69`. Download the
+[unsigned native IPA artifact](https://github.com/coldlee-en/Tandem/actions/runs/40426689978/artifacts/12700258473)
 from Actions. The artifact ZIP contains the IPA and a manifest with its SHA-256; GitHub
 sign-in may be required, and Actions retention limits apply. This is an Actions
-artifact. Version 0.1.1 is also published at
-https://github.com/coldlee-en/Tandem/releases/tag/v0.1.1 with the IPA, manifest, and checksum.
+artifact. Version 0.1.2 is also published at
+https://github.com/coldlee-en/Tandem/releases/tag/v0.1.2 with the IPA, manifest, and checksum.
 
 Verified IPA SHA-256:
 
 ```text
-ca44acd38c767e841f8d80e4bf6fa4787276b1d2930883bd75f5ce460e257f0f
+2cc1638694fdfcca6a01b355aa04732aa28bbf6ed5bab9fe311d0fdb2c442c85
 ```
 
 All 21 packaged Mach-O images have minimum deployment versions at or below
