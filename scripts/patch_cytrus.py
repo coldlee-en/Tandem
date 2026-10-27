@@ -164,6 +164,7 @@ REPLACEMENTS = {
 # upstream changes and attribution can be audited without hiding them in setup.
 CRYPTO_PATCH = Path(__file__).resolve().parent.parent / "CorePatches/NCCHCrypto/changes.json"
 CRYPTO_REPLACEMENTS = json.loads(CRYPTO_PATCH.read_text())
+LEGACY_CRYPTO_SETUP = CRYPTO_PATCH.with_name("legacy-0.1.2-setup.txt").read_text()
 
 def patch(root: Path):
     marker = root / ".tandem-patched-v1"
@@ -179,6 +180,10 @@ def patch(root: Path):
         for old, new in reversed(CRYPTO_REPLACEMENTS.get(relative, [])):
             if new in source:
                 source = source.replace(new, old)
+        if relative == "System/core/file_sys/ncch_container.cpp" and LEGACY_CRYPTO_SETUP in source:
+            old_guard = next(old for old, new in CRYPTO_REPLACEMENTS[relative]
+                             if "bool failed_to_decrypt = false;" in new)
+            source = source.replace(LEGACY_CRYPTO_SETUP, old_guard)
         for old, new in [*REPLACEMENTS.get(relative, []), *CRYPTO_REPLACEMENTS.get(relative, [])]:
             if new in source:
                 # Preserve already patched spans while upgrading older source
