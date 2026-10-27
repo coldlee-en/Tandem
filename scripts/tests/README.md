@@ -26,6 +26,14 @@ process-group cleanup.
 These tests verify native cancellation and lifecycle control flow. They do not
 exercise actual graphics, the iOS ABI, guest CPU execution, or game compatibility.
 
+## 3DS restart regression harness
+
+Run `python3 scripts/tests/run_cytrus_restart.py /path/to/patched/Cytrus` with a
+C++20 compiler. It compiles the patched bridge start and stop methods and core
+shutdown signal cleanup against lightweight stubs. It checks 1,000 immediate
+start/stop cycles and cleanup of a pending shutdown signal. It does not exercise
+graphics, guest execution, or physical-device gameplay.
+
 ## Encrypted 3DS regression harness
 
 With an installed Crypto++ development library and C++23 compiler:

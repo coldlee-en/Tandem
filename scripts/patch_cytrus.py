@@ -137,6 +137,10 @@ REPLACEMENTS = {
         ("void initialize_logging(void);", "void initialize_logging(std::string);"),
         ("void insert_disc(std::string);", "bool insert_disc(std::string);"),
     ],
+    "System/core/core.cpp": [
+        ("void System::Shutdown(bool is_deserializing) {\n",
+         "void System::Shutdown(bool is_deserializing) {\n    {\n        std::scoped_lock lock{signal_mutex};\n        current_signal = Signal::None;\n        signal_param = 0;\n    }\n"),
+    ],
     "System/bridge.cpp": [
         ("void cytrus::initialize_logging(void) {", "void cytrus::initialize_logging(std::string user_directory) {\n    FileUtil::SetUserPath(user_directory);"),
         ("void cytrus::insert_disc(std::string path) {", "bool cytrus::insert_disc(std::string path) {"),
@@ -149,7 +153,7 @@ REPLACEMENTS = {
          "if (cntnr.paused.load()) {\n                std::this_thread::sleep_for(std::chrono::milliseconds(5));\n                continue;\n            }"),
         ("void(system.RunLoop());", "if (system.RunLoop() != Core::System::ResultStatus::Success) {\n                cntnr.running.store(false);\n                break;\n            }"),
         ("system.RequestShutdown();\n    system.Shutdown();", 
-         "system.RequestShutdown();\n    if (cntnr.thread.joinable()) cntnr.thread.join();\n    system.Shutdown();"),
+         "if (cntnr.thread.joinable()) cntnr.thread.join();\n    system.Shutdown();"),
         ("cntnr.secondary_width = width;", 
          "cntnr.secondary_width = width;\n        if (cntnr.secondary_window) cntnr.secondary_window->SizeChanged(height, width);"),
         ("cntnr.width = width;", 
