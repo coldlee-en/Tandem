@@ -5,7 +5,7 @@ using Cytrus/Azahar and the MeloNX iOS port of Ryujinx. SwiftUI, Metal surfaces,
 GameController, and local file storage. iOS 17 or later.
 
 **An unsigned native development IPA is available** from the
-[successful Actions build](https://github.com/coldlee-en/Tandem/releases/tag/v0.1.2).
+[GitHub release](https://github.com/coldlee-en/Tandem/releases/tag/v0.1.2).
 It includes both emulator integrations and must be re-signed for sideloading.
 All 23 ROM-library tests and 4 iOS simulator session tests pass in macOS CI.
 Physical-device execution, performance, and game compatibility remain unverified;
