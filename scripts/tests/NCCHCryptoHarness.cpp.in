@@ -105,8 +105,8 @@ void crypt(std::vector<u8>& bytes,size_t off,size_t n,Key key,Key ctr,size_t see
 struct Fixture {
  std::shared_ptr<std::vector<u8>> bytes;
  std::vector<u8> code,icon,romfs;
- Fixture(int version,int slot,bool seeded=false,bool encrypted=true,bool ncsd=false,bool compressed=false){
-  NCCH_Header h{};h.magic=FileUtil::MakeMagic('N','C','C','H');h.version=version;h.program_id=0x0004000000000100ULL;h.content_size=80;h.extended_header_size=0x400;h.exefs_offset=8;h.exefs_size=8;h.exefs_hash_region_size=1;h.romfs_offset=16;h.romfs_size=64;h.secondary_key_slot=slot;h.seed_crypto.Assign(seeded);h.no_crypto.Assign(!encrypted);
+ Fixture(int version,int slot,bool seeded=false,bool encrypted=true,bool ncsd=false,bool compressed=false,bool misflagged=false){
+  NCCH_Header h{};h.magic=FileUtil::MakeMagic('N','C','C','H');h.version=version;h.program_id=0x0004000000000100ULL;h.content_size=80;h.extended_header_size=0x400;h.exefs_offset=8;h.exefs_size=8;h.exefs_hash_region_size=1;h.romfs_offset=16;h.romfs_size=64;h.secondary_key_slot=slot;h.seed_crypto.Assign(seeded);h.no_crypto.Assign(!encrypted && !misflagged);
   for(int i=0;i<16;++i)h.signature[i]=u8(i*3+5);for(int i=0;i<8;++i)h.partition_id[i]=u8(i+1);
   Key primaryY{},secondaryY{};std::copy_n(h.signature,16,primaryY.begin());secondaryY=primaryY;
   if(seeded){std::array<u8,32> in{};std::copy(primaryY.begin(),primaryY.end(),in.begin());std::copy(FileSys::titleSeed->begin(),FileSys::titleSeed->end(),in.begin()+16);std::array<u8,32> digest;CryptoPP::SHA256{}.CalculateDigest(digest.data(),in.data(),32);std::copy_n(digest.begin(),16,secondaryY.begin());}
@@ -138,6 +138,8 @@ int main(){try{
  check(2,0,true);check(2,10,true);check(2,0,false,false);check(2,0,false,true,true);
  check(2,0,false,true,true,true);
  reset();Fixture plain(2,0,false,false);HW::AES::xs.fill(std::nullopt);FileSys::NCCHContainer plainNCCH("fixture",0,0);require(plainNCCH.Load()==Loader::ResultStatus::Success,"plain image required keys");
+ reset();Fixture mislabeled(2,0,false,false,false,false,true);HW::AES::xs.fill(std::nullopt);FileSys::NCCHContainer mislabeledNCCH("fixture",0,0);std::vector<u8> plainCode;require(mislabeledNCCH.Load()==Loader::ResultStatus::Success && mislabeledNCCH.LoadSectionExeFS(".code",plainCode)==Loader::ResultStatus::Success && plainCode==mislabeled.code,"verified plaintext marked encrypted was rejected");
+ reset();Fixture damaged(2,0,false,false,false,false,true);(*damaged.bytes)[512]^=1;HW::AES::xs.fill(std::nullopt);FileSys::NCCHContainer damagedNCCH("fixture",0,0);require(damagedNCCH.Load()==Loader::ResultStatus::ErrorEncrypted,"corrupt plaintext was accepted");
  reset();Fixture missing(2,0);HW::AES::xs[0x2C].reset();FileSys::NCCHContainer m("fixture",0,0);require(m.Load()==Loader::ResultStatus::ErrorEncrypted,"missing primary key accepted");
  reset();Fixture wrong(2,0);(*HW::AES::xs[0x2C])[0]^=1;FileSys::NCCHContainer w("fixture",0,0);require(w.Load()==Loader::ResultStatus::ErrorEncrypted,"wrong primary key accepted");
  reset();Fixture seed(2,10,true);FileSys::titleSeed.reset();FileSys::NCCHContainer s("fixture",0,0);require(s.Load()==Loader::ResultStatus::ErrorEncrypted,"missing seed accepted");

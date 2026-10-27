@@ -7,7 +7,8 @@ their Citra/Azahar copyright and GPLv2-or-later notices.
 
 The port adapts primary/secondary key selection, seeded KeyY generation, and
 NCCH version 0/1/2 CTRs to Cytrus's newer IOFile/SubIOFile interface. ExeFS is
-decrypted before decompression; RomFS is decrypted on demand, including cached
+decrypted before decompression; verified plaintext headers are recognized even
+when the encrypted flag remains set. RomFS is decrypted on demand, including cached
 and uncached reads. Encrypted extended headers and ExeFS sections are verified
 before use. System fixed-key NCCH is explicitly unsupported.
 

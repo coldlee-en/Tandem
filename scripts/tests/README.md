@@ -46,7 +46,8 @@ Seventeen fixture combinations cover NCCH versions 0/1/2, the four secondary-key
 methods, seed crypto, plaintext, NCSD partition offsets, and compressed executable
 decryption. Each fixture checks 80 RomFS read ranges across cache hits/misses,
 unaligned offsets, uncached reads, and EOF. Additional cases reject missing or
-incorrect keys/seeds and unknown crypto methods, and allow plaintext without keys.
+incorrect keys/seeds and unknown crypto methods, and allow plaintext without keys. It also checks a verified plaintext dump
+with an incorrect encrypted flag and rejects a tampered plaintext header.
 Compilation enables AddressSanitizer and UndefinedBehaviorSanitizer. Compilation
 and execution are bounded at 120 and 30 seconds respectively.
 
