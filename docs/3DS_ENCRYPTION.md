@@ -24,7 +24,7 @@ additionally require `slot0x25KeyX`, `slot0x18KeyX`, or `slot0x1BKeyX`. Every va
 must contain exactly 32 hexadecimal characters. These are 3DS AES entries;
 the separate Switch keys importer does not configure 3DS decryption.
 
-Version 0.1.2 fixes the import location and automatically copies earlier keys and seeds when needed, without replacing files already in the correct directory.
+Version 0.1.3 also accepts decrypted cartridge headers that retain an encrypted flag when their plaintext checksum verifies. Version 0.1.2 fixes the import location and automatically copies earlier keys and seeds when needed, without replacing files already in the correct directory.
 
 The importer normalizes entries into `Tandem/System/3DS/system_data/keys.txt`, using
 the core's `:AES` section format, and stores seeds alongside it as `seeddb.bin`.

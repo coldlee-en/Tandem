@@ -5,14 +5,14 @@ Current evidence as of 2026-10-26:
 | macOS CI check | Result |
 | --- | --- |
 | EmulationKit library tests | **23 passed** |
-| iOS interface compilation and simulator session tests | Passed in [Validate](https://github.com/coldlee-en/Tandem/actions/runs/40426689926); all **4 session-lifecycle tests executed, 0 failures**, plus 23 library and key import tests |
+| iOS interface compilation and simulator session tests | Passed in [Validate](https://github.com/coldlee-en/Tandem/actions/runs/40429081305); all **4 session-lifecycle tests executed, 0 failures**, plus 23 library and key import tests |
 | Switch NativeAOT runtime | Compiled for iOS arm64; cached artifact verified |
 | Cytrus static archive | `libCytrus.a` compiled in [native build](https://github.com/coldlee-en/Tandem/actions/runs/40405335353) |
-| Final native app archive and IPA | [Build 40426689978 passed](https://github.com/coldlee-en/Tandem/actions/runs/40426689978) at source `a9c4b69`; [unsigned native artifact](https://github.com/coldlee-en/Tandem/actions/runs/40426689978/artifacts/12700258473) downloaded and checksum verified |
+| Final native app archive and IPA | [Build 40429081317 passed](https://github.com/coldlee-en/Tandem/actions/runs/40429081317) at source `a9c4b69`; [unsigned native artifact](https://github.com/coldlee-en/Tandem/actions/runs/40429081317/artifacts/12701199941) downloaded and checksum verified |
 | Packaged Mach-O inspection | All 21 images have deployment minimums at or below iOS 17; bundled dependency-closure check passed |
 
 Native IPA SHA-256:
-`2cc1638694fdfcca6a01b355aa04732aa28bbf6ed5bab9fe311d0fdb2c442c85`.
+`f0537b000e1b9f0ccc481d0f5efe4017f969d6a977803cf81272bb328f50cb0d`.
 
 Additional checks performed in the Linux workspace:
 
@@ -68,3 +68,12 @@ gameplay with a real console dump remains unverified.
 ## Version 0.1.2
 
 Native archive and release passed at source `a9c4b69`. Twenty-three library tests and seven simulator tests passed, including key import paths, old-data migration, and cover image validation. The IPA checksum and app icon metadata were verified. Physical-device gameplay remains unverified.
+
+## Version 0.1.3
+
+Native build and release passed at source `f71788a`. Synthetic tests verify
+that a plaintext extended header is accepted only when its SHA-256 matches,
+including an encrypted-flagged cartridge with no keys and a tampered-header
+rejection. Existing encrypted, seeded, compressed, and RomFS cases passed.
+The IPA version, release checksum, ZIP CRC, and compiled diagnostic were
+verified. The user’s actual game remains to be tested on a device.

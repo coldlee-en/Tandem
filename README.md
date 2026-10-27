@@ -5,7 +5,7 @@ using Cytrus/Azahar and the MeloNX iOS port of Ryujinx. SwiftUI, Metal surfaces,
 GameController, and local file storage. iOS 17 or later.
 
 **An unsigned native development IPA is available** from the
-[GitHub release](https://github.com/coldlee-en/Tandem/releases/tag/v0.1.2).
+[GitHub release](https://github.com/coldlee-en/Tandem/releases/tag/v0.1.3).
 It includes both emulator integrations and must be re-signed for sideloading.
 All 23 ROM-library tests and 4 iOS simulator session tests pass in macOS CI.
 Physical-device execution, performance, and game compatibility remain unverified;
@@ -13,7 +13,7 @@ Switch requires working JIT after installation. See [IPA.md](docs/IPA.md).
 
 Version **0.1.1** added encrypted 3DS cartridge loading with console-supplied AES
 keys. In Settings, use **Import 3DS AES keys**, then retry the game. Some titles
-also require **Import 3DS seed database**. Version **0.1.2** fixes the key import path, adds an app icon, and lets you choose a game cover from the library context menu. See [encrypted 3DS setup](docs/3DS_ENCRYPTION.md).
+also require **Import 3DS seed database**. Version **0.1.2** fixes the key import path, adds an app icon, and lets you choose a game cover from the library context menu. Version **0.1.3** recognizes verified decrypted headers that retain an encrypted flag. See [encrypted 3DS setup](docs/3DS_ENCRYPTION.md).
 
 ## What is implemented
 
@@ -79,10 +79,10 @@ xcodebuild -project Tandem.xcodeproj -scheme Tandem \
 
 Choose an installed simulator name for the last command. The simulator exercises
 the interface/lifecycle tests; it does not run the native emulator cores.
-The [Validate workflow passed](https://github.com/coldlee-en/Tandem/actions/runs/40426689926),
+The [Validate workflow passed](https://github.com/coldlee-en/Tandem/actions/runs/40429081305),
 including all 23 library tests on macOS, interface compilation, and execution of
 all 4 session-lifecycle tests in the iOS simulator with 0 failures. Those tests
-use an injected core. The [native archive and IPA build also passed](https://github.com/coldlee-en/Tandem/actions/runs/40426689978);
+use an injected core. The [native archive and IPA build also passed](https://github.com/coldlee-en/Tandem/actions/runs/40429081317);
 signing, installation, and gameplay require separate device validation.
 See [device acceptance checks](docs/DEVICE_TESTING.md) and
 [the Switch integration details](docs/SWITCH_CORE.md).
