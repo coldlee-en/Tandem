@@ -13,6 +13,19 @@ struct LibraryView: View {
     @State private var showingSettings = false
     @State private var coverTarget: GameRecord?
     @State private var importingCover = false
+    @State private var favoritesOnly = false
+    @AppStorage("favoriteGames") private var storedFavorites = ""
+
+    private var favoriteIDs: Set<String> {
+        Set(storedFavorites.split(separator: ",").map(String.init))
+    }
+
+    private func toggleFavorite(_ game: GameRecord) {
+        var ids = favoriteIDs
+        let id = game.id.uuidString
+        if ids.contains(id) { ids.remove(id) } else { ids.insert(id) }
+        storedFavorites = ids.sorted().joined(separator: ",")
+    }
 
     init(model: AppModel) {
         self.model = model
@@ -21,7 +34,8 @@ struct LibraryView: View {
 
     private var filteredGames: [GameRecord] {
         model.games.filter { game in
-            (selectedSystem == nil || game.system == selectedSystem)
+            (!favoritesOnly || favoriteIDs.contains(game.id.uuidString))
+                && (selectedSystem == nil || game.system == selectedSystem)
                 && (search.isEmpty || game.title.localizedCaseInsensitiveContains(search))
         }.sorted { ($0.lastPlayedAt ?? $0.importedAt) > ($1.lastPlayedAt ?? $1.importedAt) }
     }
@@ -31,6 +45,10 @@ struct LibraryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     introduction
+                    if search.isEmpty, !favoritesOnly,
+                       let recent = model.games.filter({ $0.lastPlayedAt != nil }).max(by: { ($0.lastPlayedAt ?? .distantPast) < ($1.lastPlayedAt ?? .distantPast) }) {
+                        continuePlaying(recent)
+                    }
                     systemPicker
                     if model.isImporting {
                         HStack(spacing: 12) {
@@ -46,6 +64,7 @@ struct LibraryView: View {
                                 GameCard(game: game, coverURL: model.coverURL(for: game), coverVersion: model.coverVersions[game.id, default: 0]) { model.launch(game) }
                                     .contextMenu {
                                         Button("Play", systemImage: "play.fill") { model.launch(game) }
+                                        Button(favoriteIDs.contains(game.id.uuidString) ? "Remove from Favorites" : "Add to Favorites", systemImage: favoriteIDs.contains(game.id.uuidString) ? "heart.slash" : "heart") { toggleFavorite(game) }
                                         Button("Choose Cover Image", systemImage: "photo") { coverTarget = game; importingCover = true }
                                         Button("Remove Cover Image", systemImage: "photo.badge.minus") { model.removeCover(for: game) }
                                         Button("Remove from Library", systemImage: "trash", role: .destructive) { model.remove(game) }
@@ -95,31 +114,57 @@ struct LibraryView: View {
                 Circle().fill(TandemTheme.mint).frame(width: 6, height: 6)
                 Text("YOUR GAMES. TOGETHER.").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(2)
             }.foregroundStyle(TandemTheme.muted)
-            Text("Two systems.\nOne little library.")
-                .font(.system(size: 34, weight: .semibold, design: .rounded)).tracking(-1)
-            Text("Nintendo 3DS & Nintendo Switch")
+            Text("Your games.\nYour next adventure.")
+                .font(.system(size: 34, weight: .semibold, design: .serif)).tracking(-1)
+            Text("A home for your handheld collection")
                 .font(.subheadline).foregroundStyle(TandemTheme.muted)
         }.padding(.top, 6)
     }
 
     private var systemPicker: some View {
-        Picker("System", selection: $selectedSystem) {
-            Text("All games").tag(Optional<GameSystem>.none)
-            Text("3DS").tag(Optional<GameSystem>.some(.nintendo3DS))
-            Text("Switch").tag(Optional<GameSystem>.some(.nintendoSwitch))
-        }.pickerStyle(.segmented)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("Your library").font(.title3.weight(.semibold))
+                Spacer()
+                Button { favoritesOnly.toggle() } label: {
+                    Label(favoritesOnly ? "Favorites" : "All games", systemImage: favoritesOnly ? "heart.fill" : "heart")
+                }.buttonStyle(.bordered).accessibilityHint("Filter your library to favorite games")
+            }
+            Picker("System", selection: $selectedSystem) {
+                Text("All games").tag(Optional<GameSystem>.none)
+                Text("3DS").tag(Optional<GameSystem>.some(.nintendo3DS))
+                Text("Switch").tag(Optional<GameSystem>.some(.nintendoSwitch))
+            }.pickerStyle(.segmented)
+        }
+    }
+
+    private func continuePlaying(_ game: GameRecord) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("CONTINUE PLAYING", systemImage: "play.circle")
+                .font(.caption.weight(.semibold)).tracking(1).foregroundStyle(TandemTheme.mint)
+            Text(game.title).font(.title2.weight(.semibold)).lineLimit(2)
+            if let played = game.lastPlayedAt {
+                Text("Last played \(played, style: .relative) ago").font(.footnote).foregroundStyle(TandemTheme.muted)
+            }
+            Button { model.launch(game) } label: {
+                Label("Continue", systemImage: "play.fill").fontWeight(.semibold)
+            }.buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading).padding(22)
+        .background(TandemTheme.surface, in: RoundedRectangle(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(TandemTheme.mint.opacity(0.25)))
     }
 
     private var emptyLibrary: some View {
         VStack(spacing: 18) {
             Image(systemName: search.isEmpty ? "square.stack.3d.up" : "magnifyingglass")
                 .font(.system(size: 42, weight: .ultraLight)).foregroundStyle(TandemTheme.mint)
-            Text(search.isEmpty ? "Make room for play." : "No games found")
+            Text(favoritesOnly ? "No favorites found." : (search.isEmpty ? "Make room for play." : "No games found"))
                 .font(.title3.weight(.semibold))
-            Text(search.isEmpty ? "Import a game file from Files to start your collection. Core availability is shown in Settings." : "Try another title or system.")
+            Text(favoritesOnly ? "Touch and hold a game, then choose Add to Favorites." : (search.isEmpty ? "Import a game file from Files to start your collection." : "Try another title or system."))
                 .font(.subheadline).foregroundStyle(TandemTheme.muted)
                 .multilineTextAlignment(.center).frame(maxWidth: 280)
-            if search.isEmpty {
+            if search.isEmpty && !favoritesOnly {
                 Button { importing = true } label: {
                     Label("Import a game", systemImage: "plus").font(.subheadline.weight(.semibold)).padding(.horizontal, 14).padding(.vertical, 8)
                 }.buttonStyle(.borderedProminent).foregroundStyle(TandemTheme.background).disabled(model.isImporting)

@@ -76,7 +76,7 @@ final class PressControl: UIControl {
     }
     private func updateAppearance() {
         let light = traitCollection.userInterfaceStyle == .light
-        backgroundColor = pressed ? (light ? UIColor(red: 0, green: 0.39, blue: 0.31, alpha: 1) : UIColor(red: 0.50, green: 0.93, blue: 0.77, alpha: 0.8)) : UIColor(white: light ? 0 : 1, alpha: prominent ? 0.12 : 0.055)
+        backgroundColor = pressed ? (light ? UIColor(red: 0, green: 0.40, blue: 0.25, alpha: 1) : UIColor(red: 0.24, green: 0.84, blue: 0.56, alpha: 0.8)) : UIColor(white: light ? 0 : 1, alpha: prominent ? 0.12 : 0.055)
         layer.borderColor = UIColor(white: light ? 0 : 1, alpha: pressed ? 0.3 : 0.09).cgColor
         label.textColor = pressed ? (light ? .white : .black) : .label
     }

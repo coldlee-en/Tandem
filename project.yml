@@ -27,8 +27,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: app.tandem.emulator
         PRODUCT_NAME: Tandem
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        CURRENT_PROJECT_VERSION: 6
-        MARKETING_VERSION: "0.1.5"
+        CURRENT_PROJECT_VERSION: 7
+        MARKETING_VERSION: "0.1.6"
         SWIFT_OBJC_BRIDGING_HEADER: App/Native/TandemRuntime.h
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: App/Info.plist
