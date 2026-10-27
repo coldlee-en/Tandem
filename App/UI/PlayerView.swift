@@ -38,7 +38,7 @@ struct PlayerView: View {
                 }
             }.padding(.horizontal, landscape ? 12 : 20).padding(.vertical, 8)
         }
-        .background(TandemTheme.background).preferredColorScheme(.dark).tint(TandemTheme.mint)
+        .background(TandemTheme.background).tint(TandemTheme.mint)
         .interactiveDismissDisabled()
         .confirmationDialog("End this session?", isPresented: $confirmingStop, titleVisibility: .visible) {
             Button("Stop Emulation", role: .destructive) { Task { await session.stop() } }

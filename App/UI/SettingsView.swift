@@ -8,11 +8,19 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var importMode: SystemImportMode = .keys
     @State private var showingImporter = false
+    @AppStorage("appearance") private var appearance = AppearanceChoice.dark.rawValue
 
     private enum SystemImportMode { case keys, firmware, threeDSKeys, threeDSSeeds }
     var body: some View {
         NavigationStack {
             List {
+                Section("Appearance") {
+                    Picker("Theme", selection: $appearance) {
+                        ForEach(AppearanceChoice.allCases) { choice in
+                            Text(choice.label).tag(choice.rawValue)
+                        }
+                    }
+                }
                 Section("Emulation cores") {
                     ForEach(GameSystem.allCases) { system in
                         let availability = CoreRegistry.availability(for: system)
@@ -79,6 +87,7 @@ struct SettingsView: View {
                     Text(model.systemDirectory.path).font(.caption.monospaced()).textSelection(.enabled)
                 }
                 Section("Controls") {
+                    NavigationLink("Controller bindings") { ControllerBindingsView() }
                     Label("Touch controls and analog sticks", systemImage: "hand.draw")
                     Label("Compatible Bluetooth controllers", systemImage: "gamecontroller")
                     Text("Tandem pauses when you leave the player or the app becomes inactive.")
@@ -95,7 +104,7 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden).background(TandemTheme.background)
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
-        }.tint(TandemTheme.mint).preferredColorScheme(.dark)
+        }.tint(TandemTheme.mint)
         .fileImporter(isPresented: $showingImporter,
                       allowedContentTypes: importMode == .firmware ? [.zip] : [.data],
                       allowsMultipleSelection: false) { [mode = importMode] result in

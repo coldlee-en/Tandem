@@ -1,5 +1,6 @@
 import Foundation
 import GameController
+import EmulationKit
 
 /// Uses one extended gamepad at a time, switching to another connected pad when
 /// it disconnects. Nintendo button names follow their physical positions.
@@ -10,6 +11,8 @@ final class ControllerInput {
     private var observers: [NSObjectProtocol] = []
     private var generation = UUID()
     private var pressedButtons: Set<EmulatorButton> = []
+    private var bindings = ControllerBindings()
+    private var swapSticks = false
 
     init(session: EmulationSession) {
         self.session = session
@@ -45,6 +48,8 @@ final class ControllerInput {
         detachController()
         guard let next = connected.first, let gamepad = next.extendedGamepad else { return }
         controller = next
+        bindings = ControllerBindings(serialized: UserDefaults.standard.string(forKey: ControllerBindings.storageKey) ?? "")
+        swapSticks = UserDefaults.standard.bool(forKey: ControllerBindings.swapSticksKey)
         let token = generation
 
         for (input, button) in buttonMappings(for: gamepad) {
@@ -58,13 +63,13 @@ final class ControllerInput {
         gamepad.leftThumbstick.valueChangedHandler = { [weak self] _, x, y in
             Task { @MainActor [weak self] in
                 guard let self, self.generation == token, self.controller != nil else { return }
-                self.session?.setStick(.left, x: x, y: y)
+                self.session?.setStick(self.swapSticks ? .right : .left, x: x, y: y)
             }
         }
         gamepad.rightThumbstick.valueChangedHandler = { [weak self] _, x, y in
             Task { @MainActor [weak self] in
                 guard let self, self.generation == token, self.controller != nil else { return }
-                self.session?.setStick(.right, x: x, y: y)
+                self.session?.setStick(self.swapSticks ? .left : .right, x: x, y: y)
             }
         }
 
@@ -76,8 +81,8 @@ final class ControllerInput {
             for (input, button) in self.buttonMappings(for: gamepad) {
                 self.setButton(button, pressed: input?.isPressed ?? false)
             }
-            self.session?.setStick(.left, x: gamepad.leftThumbstick.xAxis.value, y: gamepad.leftThumbstick.yAxis.value)
-            self.session?.setStick(.right, x: gamepad.rightThumbstick.xAxis.value, y: gamepad.rightThumbstick.yAxis.value)
+            self.session?.setStick(self.swapSticks ? .right : .left, x: gamepad.leftThumbstick.xAxis.value, y: gamepad.leftThumbstick.yAxis.value)
+            self.session?.setStick(self.swapSticks ? .left : .right, x: gamepad.rightThumbstick.xAxis.value, y: gamepad.rightThumbstick.yAxis.value)
         }
     }
 
@@ -102,18 +107,22 @@ final class ControllerInput {
     }
 
     private func buttonMappings(for gamepad: GCExtendedGamepad) -> [(GCControllerButtonInput?, EmulatorButton)] {
-        [
+        let controls: [(GCControllerButtonInput?, ControllerControl)] = [
             // GameController uses Xbox positions: A south, B east, X west, Y north.
-            (gamepad.buttonA, .b), (gamepad.buttonB, .a),
-            (gamepad.buttonX, .y), (gamepad.buttonY, .x),
+            (gamepad.buttonA, .south), (gamepad.buttonB, .east),
+            (gamepad.buttonX, .west), (gamepad.buttonY, .north),
             (gamepad.dpad.up, .up), (gamepad.dpad.down, .down),
             (gamepad.dpad.left, .left), (gamepad.dpad.right, .right),
-            (gamepad.leftShoulder, .l), (gamepad.rightShoulder, .r),
-            (gamepad.leftTrigger, .zl), (gamepad.rightTrigger, .zr),
-            (gamepad.buttonMenu, .plus), (gamepad.buttonOptions, .minus),
+            (gamepad.leftShoulder, .leftShoulder), (gamepad.rightShoulder, .rightShoulder),
+            (gamepad.leftTrigger, .leftTrigger), (gamepad.rightTrigger, .rightTrigger),
+            (gamepad.buttonMenu, .menu), (gamepad.buttonOptions, .options),
             (gamepad.buttonHome, .home),
-            (gamepad.leftThumbstickButton, .lStick),
-            (gamepad.rightThumbstickButton, .rStick)
+            (gamepad.leftThumbstickButton, .leftStick),
+            (gamepad.rightThumbstickButton, .rightStick)
         ]
+        return controls.compactMap { input, control in
+            guard let button = EmulatorButton(rawValue: bindings[control].rawValue) else { return nil }
+            return (input, button)
+        }
     }
 }

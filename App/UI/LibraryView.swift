@@ -67,7 +67,6 @@ struct LibraryView: View {
             .searchable(text: $search, prompt: "Search your library")
         }
         .tint(TandemTheme.mint)
-        .preferredColorScheme(.dark)
         .fileImporter(isPresented: $importing, allowedContentTypes: [.data], allowsMultipleSelection: true) { result in
             switch result {
             case .success(let urls): model.importGames(urls)
@@ -150,7 +149,7 @@ private struct GameCard: View {
                         VStack(spacing: 20) {
                             SystemMark(is3DS: game.system == .nintendo3DS)
                             Text(game.title.prefix(2).uppercased())
-                                .font(.system(size: 42, weight: .light, design: .rounded)).foregroundStyle(.white.opacity(0.7))
+                                .font(.system(size: 42, weight: .light, design: .rounded)).foregroundStyle(.primary.opacity(0.7))
                         }
                     }
                     VStack {
@@ -163,7 +162,7 @@ private struct GameCard: View {
                         Spacer()
                     }.padding(16)
                 }.aspectRatio(0.94, contentMode: .fit)
-                Text(game.title).font(.subheadline.weight(.medium)).foregroundStyle(.white).lineLimit(2)
+                Text(game.title).font(.subheadline.weight(.medium)).foregroundStyle(.primary).lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text(ByteCountFormatter.string(fromByteCount: game.byteCount, countStyle: .file))
                     .font(.caption).foregroundStyle(TandemTheme.muted)

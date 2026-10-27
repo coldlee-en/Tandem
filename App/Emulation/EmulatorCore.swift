@@ -6,7 +6,7 @@ import EmulationKit
 #error("The native 3DS build requires the Cytrus Swift module. Check the native target dependency and C++ interoperability settings.")
 #endif
 
-enum EmulatorButton: CaseIterable, Hashable {
+enum EmulatorButton: String, CaseIterable, Hashable {
     case a, b, x, y, up, down, left, right, l, r, zl, zr
     case plus, minus, home, lStick, rStick
 }

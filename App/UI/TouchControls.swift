@@ -59,6 +59,10 @@ final class PressControl: UIControl {
         super.didMoveToWindow()
         if window == nil { setPressed(false) }
     }
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        updateAppearance()
+    }
     override func accessibilityActivate() -> Bool {
         setPressed(true)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in self?.setPressed(false) }
@@ -71,9 +75,10 @@ final class PressControl: UIControl {
         updateAppearance()
     }
     private func updateAppearance() {
-        backgroundColor = pressed ? UIColor(red: 0.50, green: 0.93, blue: 0.77, alpha: 0.8) : UIColor(white: 1, alpha: prominent ? 0.12 : 0.055)
-        layer.borderColor = UIColor(white: 1, alpha: pressed ? 0.3 : 0.09).cgColor
-        label.textColor = pressed ? .black : UIColor(white: 0.9, alpha: 1)
+        let light = traitCollection.userInterfaceStyle == .light
+        backgroundColor = pressed ? (light ? UIColor(red: 0, green: 0.39, blue: 0.31, alpha: 1) : UIColor(red: 0.50, green: 0.93, blue: 0.77, alpha: 0.8)) : UIColor(white: light ? 0 : 1, alpha: prominent ? 0.12 : 0.055)
+        layer.borderColor = UIColor(white: light ? 0 : 1, alpha: pressed ? 0.3 : 0.09).cgColor
+        label.textColor = pressed ? (light ? .white : .black) : .label
     }
 }
 
@@ -96,14 +101,22 @@ final class AnalogControl: UIControl {
     override init(frame: CGRect) {
         super.init(frame: frame)
         isExclusiveTouch = false
-        backgroundColor = UIColor(white: 1, alpha: 0.035)
-        layer.borderColor = UIColor(white: 1, alpha: 0.1).cgColor
         layer.borderWidth = 1
-        thumb.backgroundColor = UIColor(white: 1, alpha: 0.15)
+        updateAppearance()
         thumb.isUserInteractionEnabled = false
         addSubview(thumb)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        updateAppearance()
+    }
+    private func updateAppearance() {
+        let light = traitCollection.userInterfaceStyle == .light
+        backgroundColor = UIColor(white: light ? 0 : 1, alpha: 0.035)
+        layer.borderColor = UIColor(white: light ? 0 : 1, alpha: 0.1).cgColor
+        thumb.backgroundColor = UIColor(white: light ? 0 : 1, alpha: 0.15)
+    }
     override func layoutSubviews() {
         super.layoutSubviews()
         layer.cornerRadius = min(bounds.width, bounds.height) / 2
