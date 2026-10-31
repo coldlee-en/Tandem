@@ -6,11 +6,11 @@ import EmulationKit
 struct SettingsView: View {
     @ObservedObject var model: AppModel
     @Environment(\.dismiss) private var dismiss
-    @State private var importMode: SystemImportMode = .keys
+    @State private var importMode: SystemImportMode = .threeDSKeys
     @State private var showingImporter = false
     @AppStorage("appearance") private var appearance = AppearanceChoice.dark.rawValue
 
-    private enum SystemImportMode { case keys, firmware, threeDSKeys, threeDSSeeds }
+    private enum SystemImportMode { case threeDSKeys, threeDSSeeds }
     var body: some View {
         NavigationStack {
             List {
@@ -22,7 +22,7 @@ struct SettingsView: View {
                     }
                 }
                 Section("Emulation cores") {
-                    ForEach(GameSystem.allCases) { system in
+                    ForEach([GameSystem.nintendo3DS]) { system in
                         let availability = CoreRegistry.availability(for: system)
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
@@ -37,7 +37,7 @@ struct SettingsView: View {
                     }
                 }
                 Section("Game files") {
-                    ForEach(GameSystem.allCases) { system in
+                    ForEach([GameSystem.nintendo3DS]) { system in
                         LabeledContent(system == .nintendo3DS ? "3DS" : "Switch") {
                             Text(system.supportedExtensions.map { "." + $0 }.joined(separator: ", "))
                                 .font(.caption.monospaced()).multilineTextAlignment(.trailing)
@@ -61,20 +61,6 @@ struct SettingsView: View {
                         Label("Import 3DS seed database", systemImage: "internaldrive")
                     }
                     .disabled(model.isManagingSystemData || model.session.game != nil)
-                    Button {
-                        importMode = .keys
-                        showingImporter = true
-                    } label: {
-                        Label("Import Switch keys", systemImage: "key")
-                    }
-                    .disabled(model.isManagingSystemData || model.session.game != nil)
-                    Button {
-                        importMode = .firmware
-                        showingImporter = true
-                    } label: {
-                        Label("Install Switch firmware", systemImage: "shippingbox")
-                    }
-                    .disabled(model.isManagingSystemData || model.session.game != nil || !SwitchCore.isBundled)
                     if model.isManagingSystemData {
                         ProgressView("Preparing system data…")
                             .tint(TandemTheme.mint)
@@ -106,14 +92,12 @@ struct SettingsView: View {
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
         }.tint(TandemTheme.mint)
         .fileImporter(isPresented: $showingImporter,
-                      allowedContentTypes: importMode == .firmware ? [.zip] : [.data],
+                      allowedContentTypes: [.data],
                       allowsMultipleSelection: false) { [mode = importMode] result in
             switch result {
             case .success(let urls):
                 guard let url = urls.first else { return }
                 switch mode {
-                case .keys: model.importSwitchKeys(url)
-                case .firmware: model.installSwitchFirmware(url)
                 case .threeDSKeys: model.importThreeDSData(url, seedDatabase: false)
                 case .threeDSSeeds: model.importThreeDSData(url, seedDatabase: true)
                 }

@@ -179,15 +179,14 @@ def validate_app(app: Path, mode: str) -> tuple[Path, dict, list[Path]]:
         raise PackagingError("The application binary does not have executable permissions.")
     if mode == "native":
         # Cytrus is linked statically. These dynamic artifacts prove the selected
-        # native archive also carries the rendering and Switch dependencies.
-        required = ["Ryujinx.Headless.SDL2.dylib", "libMoltenVK.dylib", "libavcodec.dylib", "libavutil.dylib",
-                    "RyujinxHelper.framework/RyujinxHelper", "SDL2.framework/SDL2", "MoltenVK.framework/MoltenVK"]
+        # native archive also carries the required rendering dependencies.
+        required = ["MoltenVK.framework/MoltenVK"]
         required += [f"{name}.framework/{name}" for name in
                      ["libavcodec", "libavdevice", "libavfilter", "libavformat", "libavutil", "libswresample", "libswscale"]]
         for relative in required:
             validate_macho(app / "Frameworks" / relative, file_type=6, deployment_target=deployment_target)
-    elif (app / "Frameworks/Ryujinx.Headless.SDL2.dylib").exists():
-        raise PackagingError("The interface artifact unexpectedly contains a Switch core; check the selected project.")
+    if (app / "Frameworks/Ryujinx.Headless.SDL2.dylib").exists():
+        raise PackagingError("The artifact unexpectedly contains a Switch core; check the selected project.")
     # Include optional and transitive images, not just the required core list.
     for entry in entries:
         if entry.is_file() and not entry.is_symlink() and entry != binary:

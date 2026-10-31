@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent.parent
 FFMPEG_LIBRARIES = ["libavcodec", "libavdevice", "libavfilter", "libavformat",
                     "libavutil", "libswresample", "libswscale"]
 
-def specification(vulkan_include: Path | None, with_3ds: bool, with_switch: bool):
+def specification(vulkan_include: Path | None, with_3ds: bool):
     spec = {"include": ["project.yml"], "name": "TandemNative", "packages": {},
             "targets": {"Tandem": {"dependencies": []}}}
     app = spec["targets"]["Tandem"]
@@ -89,37 +89,18 @@ def specification(vulkan_include: Path | None, with_3ds: bool, with_switch: bool
             {"sdk": "VideoToolbox.framework"}, {"sdk": "CoreImage.framework"},
             {"sdk": "CoreVideo.framework"}, {"sdk": "libresolv.tbd"},
             {"sdk": "libz.tbd"}, {"sdk": "libbz2.tbd"}]
-    if with_switch:
-        app.setdefault("settings", {}).setdefault("base", {})["LIBRARY_SEARCH_PATHS"] = [
-            "$(inherited)", "$(SRCROOT)/Frameworks"]
-        for name in ["Ryujinx.Headless.SDL2.dylib", "libMoltenVK.dylib", "libavcodec.dylib", "libavutil.dylib", "SDL2.xcframework"]:
-            if not (ROOT / "Frameworks" / name).exists():
-                raise ValueError(f"Missing Frameworks/{name}; run scripts/build_switch.sh on a Mac first.")
-            app["dependencies"].append({"framework": f"Frameworks/{name}", "embed": True, "codeSign": True})
-        app["dependencies"].append({"target": "RyujinxHelper", "embed": True, "codeSign": True})
-        app["sources"] = [{"path": "Frameworks/Notices", "buildPhase": "resources"}]
-        for optional in ["BreakpointJIT.framework", "Hypervisor.framework"]:
-            if (ROOT / "Frameworks" / optional).exists():
-                app["dependencies"].append({"framework": f"Frameworks/{optional}", "embed": True, "codeSign": True})
-        spec["targets"]["RyujinxHelper"] = {
-            "type": "framework", "platform": "iOS",
-            "sources": [{"path": "FrameworkSources/RyujinxHelper", "headerVisibility": "public"}],
-            "settings": {"base": {"PRODUCT_BUNDLE_IDENTIFIER": "app.tandem.RyujinxHelper",
-                                   "GENERATE_INFOPLIST_FILE": "YES", "DEFINES_MODULE": "YES"}},
-            "dependencies": [{"sdk": "UIKit.framework"}]}
     return spec
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--3ds", dest="with_3ds", action="store_true")
-    parser.add_argument("--switch", dest="with_switch", action="store_true")
     parser.add_argument("--generate", action="store_true", help="Also run XcodeGen")
     args = parser.parse_args()
-    if not args.with_3ds and not args.with_switch:
-        parser.error("Select --3ds, --switch, or both. For the interface project, use xcodegen generate directly.")
+    if not args.with_3ds:
+        parser.error("Select --3ds. For the interface project, use xcodegen generate directly.")
     sdk = os.environ.get("TANDEM_VULKAN_INCLUDE")
     try:
-        spec = specification(Path(sdk).expanduser().resolve() if sdk else None, args.with_3ds, args.with_switch)
+        spec = specification(Path(sdk).expanduser().resolve() if sdk else None, args.with_3ds)
     except ValueError as error:
         parser.exit(1, f"error: {error}\n")
     output = ROOT / "project.native.yml"

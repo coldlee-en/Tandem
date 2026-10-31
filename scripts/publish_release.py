@@ -57,14 +57,14 @@ def prepare(directory, source_sha, run_id, repository):
     checksum = ipa.with_suffix('.sha256')
     checksum.write_text(f'{data["sha256"]}  {ipa.name}\n')
     notes = directory / 'release-notes.md'
-    notes.write_text(f'''Native iOS development build of Tandem {version}, including the Cytrus/Azahar 3DS and MeloNX/Ryujinx Switch integrations.
+    notes.write_text(f'''Native iOS development build of Tandem {version}, including the Cytrus/Azahar 3DS integration.
 
 - Source: `{source_sha}`
 - [Successful native build](https://github.com/{repository}/actions/runs/{run_id})
 - iOS {data['minimum_ios']} or later; arm64; build {data['build']}.
 - SHA-256: `{data['sha256']}`
 
-The IPA is unsigned. Re-sign the app and all embedded frameworks/libraries before sideloading. Switch requires a suitable JIT-enabled process; signing alone does not grant JIT. Supply your own games and required console data. No console keys are included.
+The IPA is unsigned. Re-sign the app and all embedded frameworks/libraries before sideloading. Supply your own games and required console data. No console keys are included.
 
 This is an experimental prerelease. Device gameplay, performance, and compatibility require separate testing. The manifest and checksum are attached. Corresponding Tandem source and pinned upstream source/build instructions are available in the repository.
 ''')

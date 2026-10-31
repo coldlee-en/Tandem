@@ -10,7 +10,7 @@ usage() {
     cat <<'EOF'
 Usage: bash scripts/build_ipa.sh [--native | --interface] [--output DIRECTORY]
 
-The default native mode prepares both emulator cores and builds an unsigned
+The default native mode prepares the 3DS emulator core and builds an unsigned
 device IPA. Interface mode explicitly excludes the emulator cores and produces
 a separately named IPA for interface testing. macOS and Xcode are required.
 EOF
@@ -39,8 +39,7 @@ xcrun --sdk iphoneos --show-sdk-path >/dev/null || fail "The selected Xcode has 
 if [[ "$TANDEM_MODE" == native ]]; then
     bash "$SCRIPT_DIR/prepare_3ds.sh"
     export TANDEM_VULKAN_INCLUDE="${TANDEM_VULKAN_INCLUDE:-$TANDEM_ROOT/Vendor/GraphicsHeaders/include}"
-    bash "$SCRIPT_DIR/build_switch.sh"
-    python3 "$SCRIPT_DIR/generate_native_project.py" --3ds --switch --generate
+    python3 "$SCRIPT_DIR/generate_native_project.py" --3ds --generate
     TANDEM_PROJECT="$TANDEM_ROOT/TandemNative.xcodeproj"
 else
     (

@@ -42,7 +42,7 @@ final class AppModel: ObservableObject {
         systemDirectory = root.appendingPathComponent("System", isDirectory: true)
         session = EmulationSession(systemDirectory: systemDirectory)
         do {
-            for component in ["3DS", "Switch/system"] {
+            for component in ["3DS"] {
                 try FileManager.default.createDirectory(
                     at: systemDirectory.appendingPathComponent(component), withIntermediateDirectories: true)
             }
@@ -64,6 +64,10 @@ final class AppModel: ObservableObject {
             defer { isImporting = false }
             var failures: [String] = []
             for url in urls {
+                guard GameSystem.system(forFileExtension: url.pathExtension) == .nintendo3DS else {
+                    failures.append("\(url.lastPathComponent): Only 3DS games can be imported.")
+                    continue
+                }
                 do { games = try await store.importGame(url) }
                 catch { failures.append("\(url.lastPathComponent): \(error.localizedDescription)") }
             }
@@ -130,32 +134,6 @@ final class AppModel: ObservableObject {
             do {
                 try await systemFiles.importThreeDSData(from: url, systemDirectory: systemDirectory, seedDatabase: seedDatabase)
                 systemDataMessage = seedDatabase ? "3DS seed database imported." : "3DS AES keys imported. The core will verify them when loading your game."
-            } catch { errorMessage = error.localizedDescription }
-        }
-    }
-
-    func importSwitchKeys(_ url: URL) {
-        guard session.game == nil, !isManagingSystemData else { return }
-        isManagingSystemData = true
-        systemDataMessage = nil
-        Task {
-            defer { isManagingSystemData = false }
-            do {
-                try await systemFiles.importSwitchKeys(from: url, systemDirectory: systemDirectory)
-                systemDataMessage = "Switch keys imported. The core will validate them when loading content."
-            } catch { errorMessage = error.localizedDescription }
-        }
-    }
-
-    func installSwitchFirmware(_ url: URL) {
-        guard session.game == nil, !isManagingSystemData else { return }
-        isManagingSystemData = true
-        systemDataMessage = nil
-        Task {
-            defer { isManagingSystemData = false }
-            do {
-                let version = try await SwitchCore.installFirmware(from: url, systemDirectory: systemDirectory)
-                systemDataMessage = "Switch firmware \(version) installed."
             } catch { errorMessage = error.localizedDescription }
         }
     }

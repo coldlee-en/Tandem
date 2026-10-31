@@ -19,16 +19,7 @@ enum CoreRegistry {
                 detail: "Run scripts/prepare_3ds.sh, generate the native project, and build on a Mac. The standard project contains the library and controller interface.")
 #endif
         case .nintendoSwitch:
-            guard SwitchCore.isBundled else {
-                return CoreAvailability(isAvailable: false, summary: "Switch core not embedded",
-                    detail: "Build the pinned MeloNX native core using scripts/build_switch.sh, then generate the native project to embed its signed dependencies.")
-            }
-            guard TandemIsJITEnabled() else {
-                return CoreAvailability(isAvailable: false, summary: "Switch requires JIT",
-                    detail: "Attach Xcode's debugger to this development build. Your console's required keys and firmware must be present in System/Switch.")
-            }
-            return CoreAvailability(isAvailable: true, summary: "MeloNX embedded · JIT available",
-                detail: "Experimental Ryujinx-based core. Startup is confirmed only after the core renders its first frame. Game compatibility varies.")
+            return CoreAvailability(isAvailable: false, summary: "Switch support removed", detail: "Existing files remain on this device.")
         }
 #endif
     }
@@ -44,7 +35,7 @@ enum CoreRegistry {
             throw EmulationError.unavailable(status.detail)
 #endif
         case .nintendoSwitch:
-            return SwitchCore()
+            throw EmulationError.unavailable("Switch support has been removed. Existing files remain on this device.")
         }
     }
 }

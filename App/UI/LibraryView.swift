@@ -8,7 +8,6 @@ struct LibraryView: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var session: EmulationSession
     @State private var search = ""
-    @State private var selectedSystem: GameSystem?
     @State private var importing = false
     @State private var showingSettings = false
     @State private var coverTarget: GameRecord?
@@ -35,7 +34,7 @@ struct LibraryView: View {
     private var filteredGames: [GameRecord] {
         model.games.filter { game in
             (!favoritesOnly || favoriteIDs.contains(game.id.uuidString))
-                && (selectedSystem == nil || game.system == selectedSystem)
+                && game.system == .nintendo3DS
                 && (search.isEmpty || game.title.localizedCaseInsensitiveContains(search))
         }.sorted { ($0.lastPlayedAt ?? $0.importedAt) > ($1.lastPlayedAt ?? $1.importedAt) }
     }
@@ -46,7 +45,7 @@ struct LibraryView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     introduction
                     if search.isEmpty, !favoritesOnly,
-                       let recent = model.games.filter({ $0.lastPlayedAt != nil }).max(by: { ($0.lastPlayedAt ?? .distantPast) < ($1.lastPlayedAt ?? .distantPast) }) {
+                       let recent = model.games.filter({ $0.system == .nintendo3DS && $0.lastPlayedAt != nil }).max(by: { ($0.lastPlayedAt ?? .distantPast) < ($1.lastPlayedAt ?? .distantPast) }) {
                         continuePlaying(recent)
                     }
                     systemPicker
@@ -130,11 +129,6 @@ struct LibraryView: View {
                     Label(favoritesOnly ? "Favorites" : "All games", systemImage: favoritesOnly ? "heart.fill" : "heart")
                 }.buttonStyle(.bordered).accessibilityHint("Filter your library to favorite games")
             }
-            Picker("System", selection: $selectedSystem) {
-                Text("All games").tag(Optional<GameSystem>.none)
-                Text("3DS").tag(Optional<GameSystem>.some(.nintendo3DS))
-                Text("Switch").tag(Optional<GameSystem>.some(.nintendoSwitch))
-            }.pickerStyle(.segmented)
         }
     }
 
