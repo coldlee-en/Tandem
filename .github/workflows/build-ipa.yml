@@ -88,6 +88,9 @@ jobs:
           brew install xcodegen git-lfs
           git lfs install --local
 
+      - name: Test local library
+        run: swift test --package-path Packages/EmulationKit
+
       - name: Build and package compiled iOS app
         shell: bash
         env:
