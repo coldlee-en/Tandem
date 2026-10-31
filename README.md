@@ -1,48 +1,33 @@
 # Tandem
 
-A native iOS development project for Nintendo 3DS and Nintendo Switch emulation,
-using Cytrus/Azahar and the MeloNX iOS port of Ryujinx. SwiftUI, Metal surfaces,
-GameController, and local file storage. iOS 17 or later.
+Tandem is an iOS emulator project with a local game library, touch controls, and controller support. The project is moving toward a polished **3DS-focused 1.0**; the current development release still includes both 3DS and experimental Switch integrations. iOS 17 or later is required.
 
-**An unsigned native development IPA is available** from the
-[GitHub release](https://github.com/coldlee-en/Tandem/releases/tag/v0.1.3).
-It includes both emulator integrations and must be re-signed for sideloading.
-All 23 ROM-library tests and 4 iOS simulator session tests pass in macOS CI.
-Physical-device execution, performance, and game compatibility remain unverified;
-Switch requires working JIT after installation. See [IPA.md](docs/IPA.md).
+## Download
 
-Version **0.1.1** added encrypted 3DS cartridge loading with console-supplied AES
-keys. In Settings, use **Import 3DS AES keys**, then retry the game. Some titles
-also require **Import 3DS seed database**. Version **0.1.2** fixes the key import path, adds an app icon, and lets you choose a game cover from the library context menu. Version **0.1.3** recognizes verified decrypted headers that retain an encrypted flag. See [encrypted 3DS setup](docs/3DS_ENCRYPTION.md).
+Get the latest development build from [GitHub Releases](https://github.com/coldlee-en/Tandem/releases). The current release is [v0.1.6](https://github.com/coldlee-en/Tandem/releases/tag/v0.1.6), including `tandemv0.1.6.ipa`. The IPA is unsigned: re-sign it and its embedded code before sideloading. See [IPA packaging and signing](docs/IPA.md).
 
-## What is implemented
+One 3DS game has been reported working on a physical device. Broader compatibility, performance, and the latest changes still need device testing. Switch support in the current build requires a JIT-capable development environment and remains experimental.
 
-- Searchable 3DS/Switch library, Files imports, persistence, last-played dates,
-  source-file preservation, and recoverable deletion transactions.
-- Paired 3DS displays, Switch display, Metal layer resize, touchscreen routing,
-  simultaneous touch buttons, analog sticks, and Bluetooth gamepad input.
-- Session startup/pause/stop state, background pause, release of held controls,
-  startup cancellation, and native exit reporting.
-- A Cytrus adapter with interpreter/JIT selection and checked native load results.
-- A MeloNX adapter using its real NativeAOT exports, with a JIT gate, native
-  worker, retained arguments/surfaces, first-frame startup confirmation, timeout,
-  touchscreen, and safe stop sequencing.
-- Switch key import and native firmware ZIP installation in Settings. Firmware
-  completion is reported after installation finishes. No guest JIT is needed
-  just to install firmware.
-- Pinned-source setup scripts, checked core patches, an XcodeGen project,
-  optional native project generation, library tests, and iOS lifecycle tests.
+## Features today
 
-The standard project builds the interface without emulator binaries and reports
-the missing cores in Settings. The native project links/embeds the cores you
-build on a Mac. No gameplay, FPS, or compatibility result is simulated.
+- Import supported games from Files into a searchable local library. Choose cover images, mark favorites, and return to a recently played game.
+- Emerald styling with dark, light, and system appearance options.
+- Dual-screen 3DS display, touch controls, analog sticks, and compatible Bluetooth controllers. Remap controller buttons and swap sticks in Settings.
+- Background pause and session controls. Existing game files and saves remain on your device.
+- Cytrus/Azahar 3DS integration with interpreter support, and an experimental MeloNX/Ryujinx Switch integration in the current native build.
+
+For encrypted 3DS games, import your own console's AES keys in Settings; some titles also require a seed database. Decrypted games do not necessarily need those files. See [3DS encryption setup](docs/3DS_ENCRYPTION.md). No games, keys, or firmware are included.
+
+## Direction for 1.0
+
+The target is a finished, sideloadable **3DS-only** app, with a more polished library and player. Planned work includes save states and rewind, configurable screen and touch layouts, library collections, controller profiles, backups and sync, and accessibility improvements. These are **planned, not yet available**. The 3DS-only build must preserve existing user data, including any Switch data from earlier versions. See the [1.0 release plan](docs/V1_RELEASE_PLAN.md).
 
 ## Build
 
 See [the build guide](docs/BUILDING.md) for the complete commands and requirements.
 For unsigned IPA packaging and the macOS workflow, see [IPA.md](docs/IPA.md).
-The ready-to-publish GitHub Pages site is in `site/`; see
-[GitHub publication](docs/GITHUB.md) for repository, hosting, and build automation.
+The current website is hosted with ChatGPT Sites. See
+[GitHub publication](docs/GITHUB.md) for repository and build automation.
 For the interface project on a Mac with Xcode and XcodeGen:
 
 ```sh
@@ -77,15 +62,7 @@ xcodebuild -project Tandem.xcodeproj -scheme Tandem \
   -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-Choose an installed simulator name for the last command. The simulator exercises
-the interface/lifecycle tests; it does not run the native emulator cores.
-The [Validate workflow passed](https://github.com/coldlee-en/Tandem/actions/runs/40429081305),
-including all 23 library tests on macOS, interface compilation, and execution of
-all 4 session-lifecycle tests in the iOS simulator with 0 failures. Those tests
-use an injected core. The [native archive and IPA build also passed](https://github.com/coldlee-en/Tandem/actions/runs/40429081317);
-signing, installation, and gameplay require separate device validation.
-See [device acceptance checks](docs/DEVICE_TESTING.md) and
-[the Switch integration details](docs/SWITCH_CORE.md).
+Choose an installed simulator. Simulator tests exercise the interface and session lifecycle using test cores; they do not verify native gameplay. See [device acceptance checks](docs/DEVICE_TESTING.md) and the [GitHub Actions results](https://github.com/coldlee-en/Tandem/actions).
 
 ## License
 
