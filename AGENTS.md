@@ -12,3 +12,5 @@ version with different source or binaries; bump the version instead. If GitHub
 blocks publication, report the concrete error and available build download.
 
 Name future native IPA files `tandemv<marketing-version>.ipa`, for example `tandemv0.1.3.ipa`. Keep interface-only builds visibly distinct.
+
+Versioning preference: use three-component versions. Major feature changes advance the middle component (e.g. 0.2.0 to 0.3.0); smaller updates advance the patch component (e.g. 0.2.0 to 0.2.1).
