@@ -37,3 +37,19 @@ and execution are bounded at 120 and 30 seconds respectively.
 
 These tests validate decryption and loading of synthetic containers. They do not
 establish physical-device gameplay or compatibility with a particular game dump.
+
+## Save-state regression checks
+
+Run against the patched Cytrus checkout:
+
+```sh
+python3 scripts/tests/run_save_state_bridge.py /path/to/patched/Cytrus
+python3 scripts/tests/run_save_state_writer.py /path/to/patched/Cytrus
+```
+
+Both compile extracted native methods with a C++20 compiler. The bridge harness
+checks requests while paused, worker thread affinity, invalid and incompatible
+slots, busy filesystem operations, failed writes, and stopped sessions. The
+writer harness uses the actual SaveState method with stub serialization and
+compression to verify that write, flush, and rename failures preserve the old
+slot. Neither harness establishes retail-game serialization or iOS gameplay.
