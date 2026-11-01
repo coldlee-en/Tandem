@@ -43,4 +43,4 @@ These items are interdependent and may exceed one week. Run implementation work 
 
 ## Existing foundations and open questions
 
-Themes and controller button remapping exist in the current development app. User reports that Ocarina of Time 3D ran on a device; wider gameplay compatibility, restart behavior, and the new settings need further device verification. The current native release includes both cores, while the current 3DS interpreter path avoids requiring JIT. These facts are a starting point, not release certification.
+Themes, controller button remapping, favorites, and Continue Playing are implemented. Version 0.2.1 removed Switch emulation from the app and native build while preserving existing files. Version 0.3.0 adds three save-state slots with timestamps, compatibility checks, replacement confirmation, worker-thread requests, and atomic writes. Device testing must still verify game-specific save/load behavior. User reports that Ocarina of Time 3D ran on a device; wider compatibility remains under testing. The 3DS interpreter path avoids requiring JIT.
