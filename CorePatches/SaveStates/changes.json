@@ -1,0 +1,46 @@
+{
+  "Cytrus.swift": [
+    [
+      "    public func start() {",
+      "    public func stateAction(action: Int32, slot: Int32) -> String {\n        String(cytrus.state_action(action, slot))\n    }\n\n    public func start() {"
+    ]
+  ],
+  "System/include/cytrus/bridge.h": [
+    [
+      "void start(void), stop(void);",
+      "std::string state_action(int, int);\nvoid start(void), stop(void);"
+    ]
+  ],
+  "System/bridge.cpp": [
+    [
+      "#include \"core/core.h\"",
+      "#include \"core/core.h\"\n#include \"core/savestate.h\"\n#include \"core/movie.h\"\n#include \"core/hle/kernel/kernel.h\"\n#include <future>\n#include <functional>\n#include <vector>"
+    ],
+    [
+      "void cytrus::start(void) {",
+      "namespace {\nstd::mutex state_mutex;\nusing StateTask = std::function<void(bool)>;\nstd::vector<StateTask> state_tasks;\nvoid process_state_tasks(bool active) {\n    std::vector<StateTask> tasks;\n    { std::lock_guard lock(state_mutex); tasks.swap(state_tasks); }\n    for (auto& task : tasks) task(active);\n}\n}\n\nstd::string cytrus::state_action(int action, int slot) {\n    auto result = std::make_shared<std::promise<std::string>>();\n    auto future = result->get_future();\n    {\n        std::lock_guard lock(state_mutex);\n        if (!cntnr.running.load()) return \"The emulation session has ended.\";\n        state_tasks.push_back([result, action, slot](bool active) {\n            auto& system = Core::System::GetInstance();\n            if (!active || !system.IsPoweredOn()) {\n                result->set_value(\"The emulation session has ended.\"); return;\n            }\n            try {\n                u64 title = 0;\n                if (system.GetAppLoader().ReadProgramId(title) != Loader::ResultStatus::Success)\n                    throw std::runtime_error(\"Could not identify this game.\");\n                const auto movie = system.Movie().GetCurrentMovieID();\n                if (action == 0) {\n                    std::string text = \"OK\\n\";\n                    for (const auto& info : Core::ListSaveStates(title, movie)) {\n                        if (info.slot >= 1 && info.slot <= 3)\n                            text += std::to_string(info.slot) + \"|\" + std::to_string(info.time) + \"|\" +\n                                (info.status == Core::SaveStateInfo::ValidationStatus::OK ? \"1\" : \"0\") + \"\\n\";\n                    }\n                    result->set_value(text); return;\n                }\n                if (slot < 1 || slot > 3) throw std::runtime_error(\"Invalid save slot.\");\n                if (system.Kernel().AreAsyncOperationsPending())\n                    throw std::runtime_error(\"The game is busy. Resume briefly, then try again.\");\n                if (action == 1) {\n                    system.SaveState(slot);\n                } else if (action == 2) {\n                    const auto info = Core::GetSaveStateInfo(title, movie, slot);\n                    if (info.slot != static_cast<u32>(slot) || info.status != Core::SaveStateInfo::ValidationStatus::OK)\n                        throw std::runtime_error(\"This slot is missing, damaged, or incompatible with this core version.\");\n                    try { system.LoadState(slot); }\n                    catch (...) { cntnr.running.store(false); throw; }\n                } else throw std::runtime_error(\"Unknown save-state operation.\");\n                result->set_value(\"OK\\n\");\n            } catch (const std::exception& error) {\n                result->set_value(error.what());\n            } catch (...) {\n                result->set_value(\"The save-state operation failed.\");\n            }\n        });\n    }\n    return future.get();\n}\n\nvoid cytrus::start(void) {"
+    ],
+    [
+      "while (cntnr.running.load()) {",
+      "while (cntnr.running.load()) {\n            process_state_tasks(true);\n            if (!cntnr.running.load()) break;"
+    ],
+    [
+      "    });\n}\n\n\nvoid cytrus::stop(void)",
+      "        process_state_tasks(false);\n    });\n}\n\n\nvoid cytrus::stop(void)"
+    ]
+  ],
+  "System/core/savestate.cpp": [
+    [
+      "FileUtil::IOFile file(path, \"wb\");",
+      "const auto temporary = path + \".tmp\";\n    FileUtil::IOFile file(temporary, \"wb\");"
+    ],
+    [
+      "        throw std::runtime_error(\"Could not write to file \" + path);\n    }",
+      "        throw std::runtime_error(\"Could not write to file \" + path);\n    }\n    const bool flushed = file.Flush();\n    const bool closed = file.Close();\n    if (!flushed || !closed || !FileUtil::Rename(temporary, path)) {\n        FileUtil::Delete(temporary);\n        throw std::runtime_error(\"Could not finish saving state.\");\n    }"
+    ],
+    [
+      "    std::vector<u8> decompressed;\n    {\n        std::vector<u8> buffer(FileUtil::GetSize(path) - sizeof(CSTHeader));",
+      "    const auto size = FileUtil::GetSize(path);\n    if (size <= sizeof(CSTHeader) || size > 1024ULL * 1024 * 1024)\n        throw std::runtime_error(\"Save state is empty, damaged, or too large.\");\n    std::vector<u8> decompressed;\n    {\n        std::vector<u8> buffer(size - sizeof(CSTHeader));"
+    ]
+  ]
+}

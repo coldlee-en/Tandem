@@ -15,6 +15,47 @@ final class EmulationSession: ObservableObject {
     var coreName: String { core?.name ?? "No core loaded" }
     var canPause: Bool { state == .running || state == .paused }
 
+    @Published private(set) var saveSlots: [SaveStateSlot] = []
+    @Published private(set) var isStateBusy = false
+    @Published var saveStateMessage: String?
+    var supportsSaveStates: Bool { core is any SaveStateCore }
+
+    func refreshSaveStates() async {
+        await performStateAction { core in try await core.saveStateSlots() }
+    }
+
+    func writeSaveState(slot: Int) async {
+        await performStateAction { core in
+            try await core.saveState(slot: slot)
+            return try await core.saveStateSlots()
+        }
+    }
+
+    func restoreSaveState(slot: Int) async {
+        await performStateAction { core in
+            try await core.loadState(slot: slot)
+            return try await core.saveStateSlots()
+        }
+    }
+
+    private func performStateAction(_ operation: (any SaveStateCore) async throws -> [SaveStateSlot]) async {
+        guard canPause, !isStateBusy, let core = core as? any SaveStateCore else { return }
+        let token = generation
+        isStateBusy = true
+        saveStateMessage = nil
+        defer { if token == generation { isStateBusy = false } }
+        await setPaused(true)
+        guard token == generation, state == .paused else { return }
+        do {
+            let slots = try await operation(core)
+            guard token == generation else { return }
+            saveSlots = slots
+        } catch {
+            guard token == generation else { return }
+            saveStateMessage = error.localizedDescription
+        }
+    }
+
     private var core: (any EmulatorCore)?
     private var gameURL: URL?
     private let systemDirectory: URL
@@ -106,6 +147,9 @@ final class EmulationSession: ObservableObject {
     func stop() async {
         guard state != .idle, state != .stopping else { return }
         state = .stopping
+        isStateBusy = false
+        saveSlots = []
+        saveStateMessage = nil
         generation = UUID()
         launchTask?.cancel()
         // Wait for native initialization before teardown, avoiding use-after-free.

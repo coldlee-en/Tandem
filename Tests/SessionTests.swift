@@ -108,6 +108,26 @@ final class SessionTests: XCTestCase {
     }
 
     @MainActor
+    func testSaveStatesPauseAndReportFailureWithoutEndingSession() async throws {
+        let (session, core, _) = try makeSession()
+        core.finishStart()
+        await attach(session)
+        XCTAssertEqual(session.state, .running)
+        await session.writeSaveState(slot: 1)
+        XCTAssertEqual(session.state, .paused)
+        XCTAssertEqual(core.savedSlots, [1])
+        XCTAssertEqual(session.saveSlots.first?.id, 1)
+        XCTAssertFalse(session.isStateBusy)
+        core.stateFailure = true
+        await session.restoreSaveState(slot: 1)
+        XCTAssertNotNil(session.saveStateMessage)
+        XCTAssertEqual(session.state, .paused)
+        XCTAssertFalse(session.isStateBusy)
+        await session.stop()
+        XCTAssertTrue(session.saveSlots.isEmpty)
+    }
+
+    @MainActor
     private func makeSession() throws -> (EmulationSession, SuspendedCore, GameRecord) {
         let core = SuspendedCore()
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -150,7 +170,16 @@ final class SessionTests: XCTestCase {
 }
 
 @MainActor
-private final class SuspendedCore: EmulatorCore {
+private final class SuspendedCore: EmulatorCore, SaveStateCore {
+    var savedSlots: [Int] = []
+    var stateFailure = false
+    func saveStateSlots() async throws -> [SaveStateSlot] {
+        [SaveStateSlot(id: 1, savedAt: Date(), compatible: true)]
+    }
+    func saveState(slot: Int) async throws { savedSlots.append(slot) }
+    func loadState(slot: Int) async throws {
+        if stateFailure { throw EmulationError.startFailed("Incompatible state") }
+    }
     let system = GameSystem.nintendo3DS
     let name = "Suspended test core"
     private(set) var startCalls = 0

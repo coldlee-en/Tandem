@@ -164,6 +164,10 @@ REPLACEMENTS = {
     ],
 }
 
+# Save-state API and atomic slot writes against the pinned core.
+for relative, replacements in json.loads((Path(__file__).resolve().parent.parent / "CorePatches/SaveStates/changes.json").read_text()).items():
+    REPLACEMENTS.setdefault(relative, []).extend(replacements)
+
 # Reviewed port from the last pre-removal Citra loader; kept separate so the
 # upstream changes and attribution can be audited without hiding them in setup.
 CRYPTO_PATCH = Path(__file__).resolve().parent.parent / "CorePatches/NCCHCrypto/changes.json"

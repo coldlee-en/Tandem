@@ -7,7 +7,7 @@ import Cytrus
 
 /// Targets the pinned Cytrus API after scripts/patch_cytrus.py is applied.
 @MainActor
-final class CytrusCore: EmulatorCore, CoreExitReporting {
+final class CytrusCore: EmulatorCore, CoreExitReporting, SaveStateCore {
     let system = GameSystem.nintendo3DS
     let name = "Cytrus · Azahar"
     private static let engine = CytrusSystem()
@@ -65,6 +65,35 @@ final class CytrusCore: EmulatorCore, CoreExitReporting {
                 }
             }
         }
+    }
+
+    private func stateAction(_ action: Int32, slot: Int = 0) async throws -> String {
+        guard loaded else { throw EmulationError.startFailed("Start a game before using save states.") }
+        let response = await Self.engine.stateAction(action: action, slot: Int32(slot))
+        guard response.hasPrefix("OK\n") else {
+            throw EmulationError.startFailed(response)
+        }
+        return String(response.dropFirst(3))
+    }
+
+    func saveStateSlots() async throws -> [SaveStateSlot] {
+        let response = try await stateAction(0)
+        var slots = (1...3).map { SaveStateSlot(id: $0, savedAt: nil, compatible: false) }
+        for line in response.split(separator: "\n") {
+            let fields = line.split(separator: "|")
+            guard fields.count == 3, let slot = Int(fields[0]), (1...3).contains(slot),
+                  let seconds = Double(fields[1]) else { continue }
+            slots[slot - 1] = SaveStateSlot(id: slot, savedAt: Date(timeIntervalSince1970: seconds), compatible: fields[2] == "1")
+        }
+        return slots
+    }
+
+    func saveState(slot: Int) async throws {
+        _ = try await stateAction(1, slot: slot)
+    }
+
+    func loadState(slot: Int) async throws {
+        _ = try await stateAction(2, slot: slot)
     }
 
     func resize(surfaces: RenderSurfaces) async {

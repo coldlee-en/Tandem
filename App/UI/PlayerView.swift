@@ -6,6 +6,7 @@ struct PlayerView: View {
     @ObservedObject var session: EmulationSession
     @Environment(\.scenePhase) private var scenePhase
     @State private var confirmingStop = false
+    @State private var showingSaveStates = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -40,6 +41,7 @@ struct PlayerView: View {
         }
         .background(TandemTheme.background).tint(TandemTheme.mint)
         .interactiveDismissDisabled()
+        .sheet(isPresented: $showingSaveStates) { SaveStatesView(session: session) }
         .confirmationDialog("End this session?", isPresented: $confirmingStop, titleVisibility: .visible) {
             Button("Stop Emulation", role: .destructive) { Task { await session.stop() } }
             Button("Cancel", role: .cancel) {}
@@ -61,6 +63,10 @@ struct PlayerView: View {
                 Text(session.coreName).font(.system(size: 10, design: .monospaced)).foregroundStyle(TandemTheme.muted)
             }
             Spacer()
+            if session.supportsSaveStates {
+                Button("Save states", systemImage: "tray.full") { showingSaveStates = true }
+                    .labelStyle(.iconOnly).disabled(!session.canPause || session.isStateBusy)
+            }
             Button {
                 Task { await session.setPaused(!isPaused) }
             } label: {
