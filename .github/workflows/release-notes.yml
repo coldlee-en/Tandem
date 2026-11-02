@@ -1,0 +1,75 @@
+name: Update release patch notes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/release-notes.json
+      - .github/workflows/release-notes.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-patch-notes
+  cancel-in-progress: false
+
+jobs:
+  update-notes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test release publication guards
+        run: python3 scripts/tests/test_publish_release.py
+      - name: Update and verify published release descriptions
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+          
+          repo = os.environ['GH_REPO']
+          entries = json.loads(Path('docs/release-notes.json').read_text())
+          def command(args, payload=None):
+              result = subprocess.run(args, input=None if payload is None else json.dumps(payload),
+                                      capture_output=True, text=True, check=True, timeout=120)
+              return json.loads(result.stdout)
+          pages = command(['gh', 'api', '--paginate', '--slurp', f'repos/{repo}/releases?per_page=100'])
+          releases = [release for page in pages for release in page if not release['draft']]
+          # Validate every entry before changing any existing release.
+          for release in releases:
+              version = release['tag_name'].removeprefix('v')
+              if not isinstance(entries.get(version), str) or not entries[version].strip():
+                  raise SystemExit(f'Missing patch notes for {release["tag_name"]}')
+          start = '<!-- tandem-patch-notes:start -->'
+          end = '<!-- tandem-patch-notes:end -->'
+          for release in releases:
+              version = release['tag_name'].removeprefix('v')
+              managed = start + '\n' + entries[version].strip() + '\n' + end
+              body = release.get('body') or ''
+              if start in body:
+                  if body.count(start) != 1 or body.count(end) != 1 or body.index(end) < body.index(start):
+                      raise SystemExit('Unexpected patch-note markers in ' + release['tag_name'])
+                  updated = re.sub(re.escape(start) + r'.*?' + re.escape(end), lambda _: managed, body, count=1, flags=re.S)
+              else:
+                  updated = managed + '\n\n## Build and installation\n\n' + body
+              def assets(item):
+                  return [(a['id'], a['name'], a.get('digest'), a['size']) for a in item['assets']]
+              if body != updated:
+                  command(['gh', 'api', '--method', 'PATCH', f'repos/{repo}/releases/{release["id"]}', '--input', '-'],
+                          {'body': updated})
+              verified = command(['gh', 'api', f'repos/{repo}/releases/{release["id"]}'])
+              if (verified['body'] != updated or assets(verified) != assets(release)
+                      or verified['tag_name'] != release['tag_name']
+                      or verified['prerelease'] != release['prerelease']):
+                  raise SystemExit('Release verification failed: ' + release['tag_name'])
+              print('Verified patch notes: ' + release['html_url'])
+          PY
