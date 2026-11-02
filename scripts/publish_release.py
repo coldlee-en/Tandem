@@ -56,8 +56,18 @@ def prepare(directory, source_sha, run_id, repository):
         raise ValueError('IPA bundle metadata differs from its manifest.')
     checksum = ipa.with_suffix('.sha256')
     checksum.write_text(f'{data["sha256"]}  {ipa.name}\n')
+    entries = json.loads((Path(__file__).resolve().parent.parent / 'docs/release-notes.json').read_text())
+    changes = entries.get(version)
+    if not isinstance(changes, str) or not changes.strip():
+        raise ValueError(f'Add patch notes for {version} to docs/release-notes.json before publishing.')
     notes = directory / 'release-notes.md'
-    notes.write_text(f'''Native iOS development build of Tandem {version}, including the Cytrus/Azahar 3DS integration.
+    notes.write_text(f'''<!-- tandem-patch-notes:start -->
+{changes.strip()}
+<!-- tandem-patch-notes:end -->
+
+## Build and installation
+
+Native iOS development build of Tandem {version}, including the Cytrus/Azahar 3DS integration.
 
 - Source: `{source_sha}`
 - [Successful native build](https://github.com/{repository}/actions/runs/{run_id})
