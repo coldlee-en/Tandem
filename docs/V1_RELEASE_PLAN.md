@@ -43,4 +43,8 @@ These items are interdependent and may exceed one week. Run implementation work 
 
 ## Existing foundations and open questions
 
-Themes, controller button remapping, favorites, and Continue Playing are implemented. Version 0.2.1 removed Switch emulation from the app and native build while preserving existing files. Version 0.3.0 adds three save-state slots with timestamps, compatibility checks, replacement confirmation, worker-thread requests, and atomic writes. Device testing must still verify game-specific save/load behavior. User reports that Ocarina of Time 3D ran on a device; wider compatibility remains under testing. The 3DS interpreter path avoids requiring JIT.
+Themes, controller button remapping, favorites, and Continue Playing are implemented. Version 0.2.1 removed Switch emulation from the app and native build while preserving existing files. Version 0.3.0 adds three save-state slots with timestamps, compatibility checks, replacement confirmation, worker-thread requests, and atomic writes. The user subsequently reported passing the v0.3.0 phone checklist, including save/load, replacement, persistence, repeat launches, rotation, and backgrounding; this is a report for their tested setup, not broad compatibility certification. User reports that Ocarina of Time 3D ran on a device; wider compatibility remains under testing. The 3DS interpreter path avoids requiring JIT.
+
+## Player customization progress
+
+The v0.4.0 source implements three screen presets, screen size/gap adjustment, touch-control group placement, control size and opacity, visibility, orientation-specific persistence, and resets. Automated simulator checks passed, including keeping both Metal layers intact and notifying the core when only the touch screen changes size. The native release build and physical-device validation are tracked separately. See [player customization](PLAYER_LAYOUTS.md).
