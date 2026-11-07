@@ -8,8 +8,9 @@ import EmulationKit
 struct MetalDisplay: UIViewRepresentable {
     let session: EmulationSession
     let system: GameSystem
+    var configuration = PlayerConfiguration()
     func makeUIView(context: Context) -> ScreenPairView {
-        let view = ScreenPairView(dualScreen: system == .nintendo3DS)
+        let view = ScreenPairView(dualScreen: system == .nintendo3DS, configuration: configuration)
         view.onAttach = { primary, secondary in
             Task { await session.attach(primary: primary, secondary: secondary) }
         }
@@ -17,7 +18,12 @@ struct MetalDisplay: UIViewRepresentable {
         view.primary.onTouch = { phase, x, y in session.touch(phase, x: x, y: y) }
         return view
     }
-    func updateUIView(_ uiView: ScreenPairView, context: Context) {}
+    func updateUIView(_ uiView: ScreenPairView, context: Context) {
+        if uiView.configuration != configuration {
+            uiView.configuration = configuration
+            uiView.setNeedsLayout()
+        }
+    }
 }
 
 final class ScreenPairView: UIView {
@@ -25,8 +31,10 @@ final class ScreenPairView: UIView {
     let secondary = MetalScreenView()
     var onAttach: ((CAMetalLayer, CAMetalLayer?) -> Void)?
     private let dualScreen: Bool
-    private var previousSize = CGSize.zero
-    init(dualScreen: Bool) {
+    var configuration: PlayerConfiguration
+    private var previousDrawables: [CGSize] = []
+    init(dualScreen: Bool, configuration: PlayerConfiguration = PlayerConfiguration()) {
+        self.configuration = configuration
         self.dualScreen = dualScreen
         super.init(frame: .zero)
         backgroundColor = .clear
@@ -35,23 +43,27 @@ final class ScreenPairView: UIView {
         if dualScreen { addSubview(secondary) }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    override func didMoveToWindow() { super.didMoveToWindow(); setNeedsLayout() }
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        previousDrawables = []
+        setNeedsLayout()
+    }
     override func layoutSubviews() {
         super.layoutSubviews()
         guard bounds.width > 0, bounds.height > 0 else { return }
         if dualScreen {
-            let scale = min(bounds.width / 400, bounds.height / 488)
-            let totalHeight = 488 * scale
-            primary.frame = CGRect(x: (bounds.width - 400 * scale) / 2, y: (bounds.height - totalHeight) / 2, width: 400 * scale, height: 240 * scale)
-            secondary.frame = CGRect(x: (bounds.width - 320 * scale) / 2, y: primary.frame.maxY + 8 * scale, width: 320 * scale, height: 240 * scale)
+            let frames = PlayerScreenFrames.calculate(in: bounds, configuration: configuration)
+            primary.frame = frames.primary
+            secondary.frame = frames.secondary
         } else {
             let scale = min(bounds.width / 1280, bounds.height / 720)
             primary.frame = CGRect(x: (bounds.width - 1280 * scale) / 2, y: (bounds.height - 720 * scale) / 2, width: 1280 * scale, height: 720 * scale)
         }
         primary.layoutIfNeeded()
         secondary.layoutIfNeeded()
-        guard window != nil, previousSize != primary.bounds.size else { return }
-        previousSize = primary.bounds.size
+        let drawables = [primary.metalLayer.drawableSize, secondary.metalLayer.drawableSize]
+        guard window != nil, previousDrawables != drawables else { return }
+        previousDrawables = drawables
         onAttach?(primary.metalLayer, dualScreen ? secondary.metalLayer : nil)
     }
 }

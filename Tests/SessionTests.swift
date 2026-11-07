@@ -1,6 +1,7 @@
 import EmulationKit
 import Foundation
 import QuartzCore
+import UIKit
 import XCTest
 @testable import Tandem
 
@@ -125,6 +126,88 @@ final class SessionTests: XCTestCase {
         XCTAssertFalse(session.isStateBusy)
         await session.stop()
         XCTAssertTrue(session.saveSlots.isEmpty)
+    }
+
+
+    func testPlayerSettingsRoundTripAndSanitizeInvalidValues() {
+        let portrait = PlayerConfiguration.defaults(landscape: false)
+        let landscape = PlayerConfiguration.defaults(landscape: true)
+        XCTAssertEqual(portrait.layout, .stacked)
+        XCTAssertEqual(landscape.layout, .sideBySide)
+        XCTAssertEqual(PlayerConfiguration.decode(portrait.serialized, landscape: false), portrait)
+        XCTAssertEqual(PlayerConfiguration.decode(landscape.serialized, landscape: true), landscape)
+        XCTAssertEqual(PlayerConfiguration.decode("damaged", landscape: true), landscape)
+        var edited = portrait
+        edited.controlOpacity = -1
+        edited.controlScale = 100
+        edited.screenScale = .nan
+        edited.left.x = -1
+        let restored = PlayerConfiguration.decode(edited.serialized, landscape: false)
+        XCTAssertEqual(restored.controlOpacity, 0.25)
+        XCTAssertEqual(restored.controlScale, 1.15)
+        XCTAssertEqual(restored.screenScale, 1)
+        XCTAssertEqual(restored.left.x, 0)
+        XCTAssertEqual(portrait.layout, .stacked)
+    }
+
+    func testScreenLayoutsKeepBothAspectRatiosInsideBounds() {
+        for size in [CGSize(width: 320, height: 480), CGSize(width: 800, height: 240), CGSize(width: 1, height: 1)] {
+            let bounds = CGRect(origin: .zero, size: size)
+            for layout in PlayerScreenLayout.allCases {
+                var config = PlayerConfiguration()
+                config.layout = layout
+                config.screenGap = 32
+                config.screenScale = 0.65
+                let frames = PlayerScreenFrames.calculate(in: bounds, configuration: config)
+                XCTAssertTrue(bounds.insetBy(dx: -0.001, dy: -0.001).contains(frames.primary))
+                XCTAssertTrue(bounds.insetBy(dx: -0.001, dy: -0.001).contains(frames.secondary))
+                XCTAssertEqual(frames.primary.width / frames.primary.height, 400.0 / 240.0, accuracy: 0.001)
+                XCTAssertEqual(frames.secondary.width / frames.secondary.height, 320.0 / 240.0, accuracy: 0.001)
+                XCTAssertFalse(frames.primary.intersects(frames.secondary))
+            }
+        }
+        let empty = PlayerScreenFrames.calculate(in: .zero, configuration: PlayerConfiguration())
+        XCTAssertEqual(empty.primary, .zero)
+        XCTAssertEqual(empty.secondary, .zero)
+    }
+
+    func testControlPlacementStaysInsideThePlayer() {
+        let bounds = CGRect(x: 10, y: 20, width: 300, height: 200)
+        let size = CGSize(width: 100, height: 80)
+        for anchor in [ControlAnchor(x: 0, y: 0), ControlAnchor(x: 1, y: 1)] {
+            let center = PlayerScreenFrames.controlCenter(anchor, size: size, in: bounds)
+            XCTAssertTrue(bounds.contains(CGRect(x: center.x - 50, y: center.y - 40, width: 100, height: 80)))
+        }
+    }
+
+    @MainActor
+    func testChangingOnlyTheTouchScreenSizeNotifiesCoreWithoutReplacingLayers() {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1200, height: 240))
+        var config = PlayerConfiguration()
+        config.layout = .sideBySide
+        let view = ScreenPairView(dualScreen: true, configuration: config)
+        view.frame = window.bounds
+        var attaches = 0
+        view.onAttach = { _, _ in attaches += 1 }
+        window.addSubview(view)
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        let topLayer = view.primary.metalLayer
+        let touchLayer = view.secondary.metalLayer
+        let topSize = topLayer.drawableSize
+        let oldTouchSize = touchLayer.drawableSize
+        let previousAttaches = attaches
+        config.layout = .topFocus
+        view.configuration = config
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        XCTAssertTrue(view.primary.metalLayer === topLayer)
+        XCTAssertTrue(view.secondary.metalLayer === touchLayer)
+        XCTAssertEqual(view.primary.metalLayer.drawableSize, topSize)
+        XCTAssertLessThan(view.secondary.metalLayer.drawableSize.width, oldTouchSize.width)
+        XCTAssertGreaterThan(attaches, previousAttaches)
+        XCTAssertFalse(view.primary.isUserInteractionEnabled)
+        XCTAssertTrue(view.secondary.isUserInteractionEnabled)
     }
 
     @MainActor
