@@ -7,12 +7,17 @@ import EmulationKit
 struct LibraryView: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var session: EmulationSession
+    @ObservedObject private var collections: LibraryCollectionsStore
     @State private var search = ""
     @State private var importing = false
     @State private var showingSettings = false
     @State private var coverTarget: GameRecord?
     @State private var importingCover = false
     @State private var favoritesOnly = false
+    @State private var selectedCollection: UUID?
+    @State private var showingCollections = false
+    @State private var detailTarget: GameRecord?
+    @State private var pendingLaunch: GameRecord?
     @AppStorage("favoriteGames") private var storedFavorites = ""
 
     private var favoriteIDs: Set<String> {
@@ -29,12 +34,14 @@ struct LibraryView: View {
     init(model: AppModel) {
         self.model = model
         self.session = model.session
+        self.collections = model.collections
     }
 
     private var filteredGames: [GameRecord] {
         model.games.filter { game in
             (!favoritesOnly || favoriteIDs.contains(game.id.uuidString))
                 && game.system == .nintendo3DS
+                && (selectedCollection.map { collections.catalog.contains(gameID: game.id, collectionID: $0) } ?? true)
                 && (search.isEmpty || game.title.localizedCaseInsensitiveContains(search))
         }.sorted { ($0.lastPlayedAt ?? $0.importedAt) > ($1.lastPlayedAt ?? $1.importedAt) }
     }
@@ -44,7 +51,7 @@ struct LibraryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     introduction
-                    if search.isEmpty, !favoritesOnly,
+                    if search.isEmpty, !favoritesOnly, selectedCollection == nil,
                        let recent = model.games.filter({ $0.system == .nintendo3DS && $0.lastPlayedAt != nil }).max(by: { ($0.lastPlayedAt ?? .distantPast) < ($1.lastPlayedAt ?? .distantPast) }) {
                         continuePlaying(recent)
                     }
@@ -60,9 +67,10 @@ struct LibraryView: View {
                     else {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 155, maximum: 240), spacing: 16)], spacing: 20) {
                             ForEach(filteredGames) { game in
-                                GameCard(game: game, coverURL: model.coverURL(for: game), coverVersion: model.coverVersions[game.id, default: 0]) { model.launch(game) }
+                                GameCard(game: game, coverURL: model.coverURL(for: game), coverVersion: model.coverVersions[game.id, default: 0], isFavorite: favoriteIDs.contains(game.id.uuidString), play: { model.launch(game) }, details: { detailTarget = game })
                                     .contextMenu {
                                         Button("Play", systemImage: "play.fill") { model.launch(game) }
+                                        Button("Details and collections", systemImage: "info.circle") { detailTarget = game }
                                         Button(favoriteIDs.contains(game.id.uuidString) ? "Remove from Favorites" : "Add to Favorites", systemImage: favoriteIDs.contains(game.id.uuidString) ? "heart.slash" : "heart") { toggleFavorite(game) }
                                         Button("Choose Cover Image", systemImage: "photo") { coverTarget = game; importingCover = true }
                                         Button("Remove Cover Image", systemImage: "photo.badge.minus") { model.removeCover(for: game) }
@@ -99,6 +107,25 @@ struct LibraryView: View {
             }
         }
         .sheet(isPresented: $showingSettings) { SettingsView(model: model) }
+        .sheet(isPresented: $showingCollections) { CollectionsView(model: model, store: collections) }
+        .sheet(item: $detailTarget, onDismiss: {
+            if let game = pendingLaunch {
+                pendingLaunch = nil
+                model.launch(game)
+            }
+        }) { game in
+            GameDetailsView(game: game, model: model, collections: collections, isFavorite: Binding {
+                favoriteIDs.contains(game.id.uuidString)
+            } set: { value in
+                if value != favoriteIDs.contains(game.id.uuidString) { toggleFavorite(game) }
+            }, play: {
+                pendingLaunch = game
+                detailTarget = nil
+            })
+        }
+        .onChange(of: collections.catalog.collections.map(\.id)) { _, ids in
+            if let selectedCollection, !ids.contains(selectedCollection) { self.selectedCollection = nil }
+        }
         .alert("Tandem", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
             Button("OK") { model.errorMessage = nil }
         } message: { Text(model.errorMessage ?? "") }
@@ -125,11 +152,33 @@ struct LibraryView: View {
             HStack {
                 Text("Your library").font(.title3.weight(.semibold))
                 Spacer()
-                Button { favoritesOnly.toggle() } label: {
-                    Label(favoritesOnly ? "Favorites" : "All games", systemImage: favoritesOnly ? "heart.fill" : "heart")
-                }.buttonStyle(.bordered).accessibilityHint("Filter your library to favorite games")
+                Button("Collections", systemImage: "folder") { showingCollections = true }
+                    .buttonStyle(.bordered)
             }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    filterButton("All games", icon: "square.grid.2x2", selected: !favoritesOnly && selectedCollection == nil) {
+                        favoritesOnly = false; selectedCollection = nil
+                    }
+                    filterButton("Favorites", icon: "heart", selected: favoritesOnly) {
+                        favoritesOnly = true; selectedCollection = nil
+                    }
+                    ForEach(collections.catalog.collections) { collection in
+                        filterButton(collection.name, icon: "folder", selected: selectedCollection == collection.id) {
+                            favoritesOnly = false; selectedCollection = collection.id
+                        }
+                    }
+                }
+            }
+            if let message = collections.loadError { Text(message).font(.footnote).foregroundStyle(TandemTheme.muted) }
         }
+    }
+
+    private func filterButton(_ title: String, icon: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) { Label(title, systemImage: icon).lineLimit(1) }
+            .buttonStyle(.bordered)
+            .tint(selected ? TandemTheme.mint : TandemTheme.muted)
+            .accessibilityValue(selected ? "Selected" : "")
     }
 
     private func continuePlaying(_ game: GameRecord) -> some View {
@@ -143,6 +192,7 @@ struct LibraryView: View {
             Button { model.launch(game) } label: {
                 Label("Continue", systemImage: "play.fill").fontWeight(.semibold)
             }.buttonStyle(.borderedProminent)
+            Button("Game details", systemImage: "info.circle") { detailTarget = game }.buttonStyle(.bordered)
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(22)
         .background(TandemTheme.surface, in: RoundedRectangle(cornerRadius: 20))
@@ -153,12 +203,12 @@ struct LibraryView: View {
         VStack(spacing: 18) {
             Image(systemName: search.isEmpty ? "square.stack.3d.up" : "magnifyingglass")
                 .font(.system(size: 42, weight: .ultraLight)).foregroundStyle(TandemTheme.mint)
-            Text(favoritesOnly ? "No favorites found." : (search.isEmpty ? "Make room for play." : "No games found"))
+            Text(!search.isEmpty ? "No matching games." : (selectedCollection != nil ? "No games in this collection." : (favoritesOnly ? "No favorites found." : "Make room for play.")))
                 .font(.title3.weight(.semibold))
-            Text(favoritesOnly ? "Touch and hold a game, then choose Add to Favorites." : (search.isEmpty ? "Import a game file from Files to start your collection." : "Try another title or system."))
+            Text(!search.isEmpty ? "Try another title or clear your search." : (selectedCollection != nil ? "Use Collections to choose games for this collection." : (favoritesOnly ? "Open a game’s details to mark it as a favorite." : "Import a game file from Files to start your library.")))
                 .font(.subheadline).foregroundStyle(TandemTheme.muted)
                 .multilineTextAlignment(.center).frame(maxWidth: 280)
-            if search.isEmpty && !favoritesOnly {
+            if search.isEmpty && !favoritesOnly && selectedCollection == nil {
                 Button { importing = true } label: {
                     Label("Import a game", systemImage: "plus").font(.subheadline.weight(.semibold)).padding(.horizontal, 14).padding(.vertical, 8)
                 }.buttonStyle(.borderedProminent).foregroundStyle(TandemTheme.background).disabled(model.isImporting)
@@ -172,41 +222,33 @@ private struct GameCard: View {
     let game: GameRecord
     let coverURL: URL
     let coverVersion: Int
+    let isFavorite: Bool
     let play: () -> Void
-    @State private var cover: UIImage?
+    let details: () -> Void
+
     var body: some View {
-        Button(action: play) {
-            VStack(alignment: .leading, spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 18).fill(TandemTheme.surface)
-                    if let cover {
-                        GeometryReader { proxy in
-                            Image(uiImage: cover).resizable().scaledToFill()
-                                .frame(width: proxy.size.width, height: proxy.size.height).clipped()
-                        }.clipShape(RoundedRectangle(cornerRadius: 18))
-                    } else {
-                        VStack(spacing: 20) {
-                            SystemMark(is3DS: game.system == .nintendo3DS)
-                            Text(game.title.prefix(2).uppercased())
-                                .font(.system(size: 42, weight: .light, design: .rounded)).foregroundStyle(.primary.opacity(0.7))
+        VStack(alignment: .leading, spacing: 10) {
+            Button(action: play) {
+                GameArtwork(game: game, coverURL: coverURL, coverVersion: coverVersion)
+                    .aspectRatio(0.94, contentMode: .fit)
+                    .overlay(alignment: .topTrailing) {
+                        if isFavorite {
+                            Image(systemName: "heart.fill").foregroundStyle(TandemTheme.mint)
+                                .padding(9).background(.ultraThinMaterial, in: Circle()).padding(10)
+                                .accessibilityHidden(true)
                         }
                     }
-                    VStack {
-                        HStack {
-                            Text(game.system == .nintendo3DS ? "3DS" : "SWITCH")
-                                .font(.system(size: 9, weight: .semibold, design: .monospaced)).tracking(1)
-                            Spacer()
-                            Image(systemName: "play.fill").font(.system(size: 9))
-                        }.foregroundStyle(TandemTheme.muted)
-                        Spacer()
-                    }.padding(16)
-                }.aspectRatio(0.94, contentMode: .fit)
+            }.buttonStyle(.plain).accessibilityLabel("Play \(game.title)")
+            HStack(alignment: .top, spacing: 6) {
                 Text(game.title).font(.subheadline.weight(.medium)).foregroundStyle(.primary).lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text(ByteCountFormatter.string(fromByteCount: game.byteCount, countStyle: .file))
-                    .font(.caption).foregroundStyle(TandemTheme.muted)
+                Button(action: details) {
+                    Image(systemName: "ellipsis.circle").frame(width: 44, height: 44)
+                }.buttonStyle(.plain).foregroundStyle(TandemTheme.mint)
+                    .accessibilityLabel("Details and collections for \(game.title)")
             }
-        }.buttonStyle(.plain).accessibilityLabel("Play \(game.title), \(game.system.displayName)")
-            .task(id: coverVersion) { cover = UIImage(contentsOfFile: coverURL.path) }
+            Text(ByteCountFormatter.string(fromByteCount: game.byteCount, countStyle: .file))
+                .font(.caption).foregroundStyle(TandemTheme.muted)
+        }
     }
 }

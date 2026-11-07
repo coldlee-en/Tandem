@@ -31,6 +31,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var isManagingSystemData = false
     @Published var systemDataMessage: String?
     @Published private(set) var coverVersions: [UUID: Int] = [:]
+    let collections = LibraryCollectionsStore()
     let session: EmulationSession
     let systemDirectory: URL
     private let store: LibraryStore?
