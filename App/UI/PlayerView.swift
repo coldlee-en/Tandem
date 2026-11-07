@@ -24,22 +24,23 @@ struct PlayerView: View {
                         let baseWidth: CGFloat = landscape ? 110 : 140
                         let baseHeight: CGFloat = landscape ? 215 : 250
                         let scale = min(CGFloat(config.controlScale),
-                                        max(0.1, (size.height - 12) / baseHeight),
+                                        max(0.1, (size.height - 56) / baseHeight),
                                         max(0.1, (size.width / 2 - 12) / baseWidth))
                         let groupSize = CGSize(width: baseWidth * scale, height: baseHeight * scale)
                         let bounds = CGRect(origin: .zero, size: size)
+                        let controlBounds = CGRect(x: 0, y: 0, width: size.width, height: max(1, size.height - 44 * scale))
                         ZStack {
                             // Keep this display at one identity across layouts and rotations.
                             display(game.system, configuration: config)
                                 .padding(.horizontal, landscape && config.showControls ? groupSize.width + 12 : 0)
-                                .padding(.bottom, !landscape && config.showControls ? groupSize.height + 16 : 0)
+                                .padding(.bottom, !landscape && config.showControls ? groupSize.height + 60 * scale : 0)
                             if config.showControls {
                                 controlGroup(left: true, landscape: landscape, baseSize: CGSize(width: baseWidth, height: baseHeight), scale: scale)
                                     .opacity(config.controlOpacity)
-                                    .position(PlayerScreenFrames.controlCenter(config.left, size: groupSize, in: bounds))
+                                    .position(PlayerScreenFrames.controlCenter(config.left, size: groupSize, in: controlBounds))
                                 controlGroup(left: false, landscape: landscape, baseSize: CGSize(width: baseWidth, height: baseHeight), scale: scale)
                                     .opacity(config.controlOpacity)
-                                    .position(PlayerScreenFrames.controlCenter(config.right, size: groupSize, in: bounds))
+                                    .position(PlayerScreenFrames.controlCenter(config.right, size: groupSize, in: controlBounds))
                                 systemControls
                                     .frame(width: 126, height: 34)
                                     .scaleEffect(scale)
