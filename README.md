@@ -11,6 +11,7 @@ One 3DS game has been reported working on a physical device. Broader compatibili
 ## Features today
 
 - Import supported games from Files into a searchable local library. Choose cover images, mark favorites, and return to a recently played game.
+- Local collections with multiple memberships, collection filtering, and visible game-details menus for Play, Favorites, artwork, and file information. See [collections](docs/COLLECTIONS.md).
 - Emerald styling with dark, light, and system appearance options.
 - Dual-screen 3DS display, touch controls, analog sticks, and compatible Bluetooth controllers. Remap controller buttons and swap sticks in Settings.
 - Player customization: three screen arrangements, screen size and gap, control-group placement, size and opacity, and independent portrait/landscape settings. See [player layouts](docs/PLAYER_LAYOUTS.md).
@@ -22,7 +23,7 @@ For encrypted 3DS games, import your own console's AES keys in Settings; some ti
 
 ## Direction for 1.0
 
-The target is a finished, sideloadable **3DS-only** app, with a more polished library and player. Planned work includes rewind, individual button placement, library collections, controller profiles, backups and sync, and accessibility improvements. These are **planned, not yet available**. Existing Switch game and system files are preserved but are no longer shown as playable. See the [1.0 release plan](docs/V1_RELEASE_PLAN.md).
+The target is a finished, sideloadable **3DS-only** app, with a more polished library and player. Planned work includes rewind, individual button placement, automatic game metadata, controller profiles, backups and sync, and accessibility improvements. These are **planned, not yet available**. Existing Switch game and system files are preserved but are no longer shown as playable. See the [1.0 release plan](docs/V1_RELEASE_PLAN.md).
 
 ## Build
 
