@@ -15,6 +15,9 @@ struct CollectionsView: View {
         var title: String {
             switch self { case .reset: return "Reset collection information?"; case .delete: return "Delete this collection?" }
         }
+        var buttonTitle: String {
+            switch self { case .reset: return "Reset collections"; case .delete: return "Delete collection" }
+        }
         var message: String {
             switch self {
             case .reset: return "This clears collection names and memberships. Games, covers, favorites, and saves stay on this device."
@@ -69,7 +72,7 @@ struct CollectionsView: View {
             .toolbar { Button("Done") { dismiss() } }
             .confirmationDialog(confirmation?.title ?? "Collections", isPresented: Binding(get: { confirmation != nil }, set: { if !$0 { confirmation = nil } }), titleVisibility: .visible) {
                 if let action = confirmation {
-                    Button("Confirm", role: .destructive) {
+                    Button(action.buttonTitle, role: .destructive) {
                         switch action {
                         case .reset: store.reset()
                         case .delete(let collection):
@@ -174,7 +177,10 @@ struct GameCollectionsView: View {
         NavigationStack {
             List {
                 Section {
-                    if let message = store.loadError { Text(message) }
+                    if let message = store.loadError {
+                        Text(message)
+                        Text("Open Collections from the library to review reset options.").font(.footnote)
+                    }
                     ForEach(store.catalog.collections) { collection in
                         Toggle(collection.name, isOn: Binding {
                             store.catalog.contains(gameID: game.id, collectionID: collection.id)

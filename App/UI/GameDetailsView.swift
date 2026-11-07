@@ -64,7 +64,7 @@ struct GameDetailsView: View {
                     }
                     VStack(alignment: .leading, spacing: 12) {
                         Label("Collections", systemImage: "folder").font(.headline)
-                        Text(collectionNames.isEmpty ? "Not in a collection" : collectionNames.joined(separator: ", "))
+                        Text(collections.loadError ?? (collectionNames.isEmpty ? "Not in a collection" : collectionNames.joined(separator: ", ")))
                             .foregroundStyle(TandemTheme.muted)
                         Button("Choose collections", systemImage: "folder.badge.plus") { showingCollections = true }
                             .buttonStyle(.bordered)
