@@ -47,4 +47,8 @@ Themes, controller button remapping, favorites, and Continue Playing are impleme
 
 ## Player customization progress
 
-The v0.4.0 source implements three screen presets, screen size/gap adjustment, touch-control group placement, control size and opacity, visibility, orientation-specific persistence, and resets. Automated simulator checks passed, including keeping both Metal layers intact and notifying the core when only the touch screen changes size. The native release build and physical-device validation are tracked separately. See [player customization](PLAYER_LAYOUTS.md).
+The v0.4.0 source implements three screen presets, screen size/gap adjustment, touch-control group placement, control size and opacity, visibility, orientation-specific persistence, and resets. Automated simulator checks passed, including keeping both Metal layers intact and notifying the core when only the touch screen changes size. The native v0.4.0 release was published, and the user subsequently reported that it worked on their phone; this does not establish wider compatibility. See [player customization](PLAYER_LAYOUTS.md).
+
+## Library organization progress
+
+The v0.5.0 source adds local collections, multi-collection memberships, collection filtering, and a visible game-details menu for artwork, favorites, collection assignments, file information, and launch. Collection deletion affects organization metadata only. Invalid stored collection data is preserved until the user explicitly resets it. Device testing for these new flows is still pending. See [collections and details](COLLECTIONS.md).
